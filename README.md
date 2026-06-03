@@ -2,6 +2,9 @@
 
 A distraction-free learning environment for YouTube playlists.
 
+<img src="/assets/homepage.png" width="50%" alt="curatube homepage">
+<img src="/assets/playlist.png" width="50%" alt="curatube playlist view with notes and timestamps">
+
 ## Development
 
 Curatube is developed inside Docker so local Node, pnpm, yt-dlp, and native SQLite
