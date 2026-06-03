@@ -1,4 +1,5 @@
 import { HomePage } from "@/components/home-page";
+import { getBuildCommit } from "@/lib/build-info";
 import { getPlaylists, getRecentJobs } from "@/lib/db";
 import { backfillPlaylists } from "@/lib/thumbnails";
 
@@ -10,6 +11,11 @@ export default async function Page() {
 
   await backfillPlaylists(playlists);
 
-  return <HomePage initialPlaylists={playlists} initialJobs={jobs} />;
+  return (
+    <HomePage
+      initialPlaylists={playlists}
+      initialJobs={jobs}
+      buildCommit={getBuildCommit()}
+    />
+  );
 }
-

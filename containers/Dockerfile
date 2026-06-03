@@ -31,23 +31,29 @@ EXPOSE 3000
 CMD ["pnpm", "dev", "--hostname", "0.0.0.0"]
 
 FROM deps AS builder
+ARG CURATUBE_BUILD_COMMIT=
+ENV CURATUBE_BUILD_COMMIT=$CURATUBE_BUILD_COMMIT
 COPY . .
-RUN CURATUBE_DB_PATH=:memory: pnpm build
+RUN printf "%s" "$CURATUBE_BUILD_COMMIT" > .curatube-build-commit \
+  && CURATUBE_DB_PATH=:memory: pnpm build
 
 FROM base AS runner
 LABEL org.opencontainers.image.source="https://github.com/say4n/curatube"
+ARG CURATUBE_BUILD_COMMIT=
 
 ENV NODE_ENV=production
 ENV CURATUBE_DATA_DIR=/data
 ENV CURATUBE_CONFIG_DIR=/data/config
 ENV CURATUBE_MEDIA_DIR=/data/media
 ENV CURATUBE_DB_PATH=/data/curatube.sqlite
+ENV CURATUBE_BUILD_COMMIT=$CURATUBE_BUILD_COMMIT
 
 WORKDIR /app
 
 RUN mkdir -p /data/config /data/media
 
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/.curatube-build-commit ./.curatube-build-commit
 
 # Automatically leverage output traces to reduce image size
 COPY --from=builder /app/.next/standalone ./

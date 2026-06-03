@@ -82,6 +82,7 @@ out
 data/
 !data/demo.json.gz
 .antigravitycli/
+.curatube-build-commit
 
 # Nuxt.js build / generate output
 .nuxt
