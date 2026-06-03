@@ -18,6 +18,7 @@ services:
       CURATUBE_CONFIG_DIR: /data/config
       CURATUBE_MEDIA_DIR: /data/media
       CURATUBE_DB_PATH: /data/curatube.sqlite
+      # DEMO_MODE_ENABLED: true
     command: pnpm dev --hostname 0.0.0.0
 
 volumes:
