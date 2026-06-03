@@ -15,6 +15,8 @@ import {
 } from "@/lib/db";
 import { prepareVideoDownloadForStreaming } from "@/lib/downloads";
 
+import { backfillVideos } from "@/lib/thumbnails";
+
 export const dynamic = "force-dynamic";
 
 export default async function VideoPage({
@@ -29,6 +31,8 @@ export default async function VideoPage({
 
   const videos = getPlaylistVideos(playlistId);
   if (videos.length === 0) notFound();
+
+  await backfillVideos(videos);
 
   const video = getVideo(videoId);
   if (!video || video.playlist_id !== playlistId) {
