@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  background: #f7f4ef;
+  color: #171717;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    linear-gradient(180deg, rgba(247, 244, 239, 0.92), rgba(247, 244, 239, 1)),
+    #f7f4ef;
+  color: #171717;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+iframe {
+  border: 0;
+}
+
+.prose-note {
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.prose-note h1,
+.prose-note h2,
+.prose-note h3 {
+  margin: 1rem 0 0.4rem;
+  font-weight: 750;
+}
+
+.prose-note p,
+.prose-note ul,
+.prose-note ol,
+.prose-note blockquote,
+.prose-note pre {
+  margin: 0.65rem 0;
+}
+
+.prose-note ul,
+.prose-note ol {
+  padding-left: 1.25rem;
+}
+
+.prose-note code {
+  border-radius: 4px;
+  background: #ece8df;
+  padding: 0.1rem 0.3rem;
+}
+
+.prose-note pre {
+  overflow-x: auto;
+  border-radius: 8px;
+  background: #171717;
+  color: #f7f4ef;
+  padding: 0.75rem;
+}
+
+.prose-note pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.prose-note table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prose-note th,
+.prose-note td {
+  border: 1px solid #d8d1c3;
+  padding: 0.35rem 0.5rem;
+}
+

@@ -1,0 +1,26 @@
+services:
+  curatube:
+    build:
+      context: ..
+      dockerfile: containers/Dockerfile
+      target: dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ..:/app
+      - curatube-node-modules:/app/node_modules
+      - curatube-next-cache:/app/.next
+      - curatube-data:/data
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      CURATUBE_DATA_DIR: /data
+      CURATUBE_CONFIG_DIR: /data/config
+      CURATUBE_MEDIA_DIR: /data/media
+      CURATUBE_DB_PATH: /data/curatube.sqlite
+    command: pnpm dev --hostname 0.0.0.0
+
+volumes:
+  curatube-data:
+  curatube-node-modules:
+  curatube-next-cache:

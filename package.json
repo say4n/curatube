@@ -1,0 +1,35 @@
+{
+  "name": "curatube",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.5.1",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "katex": "^0.16.22",
+    "lucide-react": "^0.468.0",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-markdown": "^9.0.1",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.0",
+    "remark-math": "^6.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.10.2",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2"
+  }
+}

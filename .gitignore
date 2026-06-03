@@ -78,6 +78,9 @@ web_modules/
 .next
 out
 
+# Local app data
+data/
+
 # Nuxt.js build / generate output
 .nuxt
 dist
@@ -124,6 +127,7 @@ dist
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+.vscode/
 
 # pnpm
 .pnpm-store
