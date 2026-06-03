@@ -129,6 +129,7 @@ export function LearningWorkspace({
   } | null>(null);
   const youtubeHostRef = useRef<HTMLDivElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const isUnloadingRef = useRef(false);
   const transcriptListRef = useRef<HTMLDivElement | null>(null);
   const transcriptItemRefs = useRef(new Map<number, HTMLButtonElement>());
   const playerElementId = useMemo(() => `youtube-player-${video.youtube_id}`, [video.youtube_id]);
@@ -165,6 +166,7 @@ export function LearningWorkspace({
     setDownloadStatus(initialDownloadStatus);
     setPendingLocalSeek(null);
     setCurrentPlaybackTime(initialProgressSeconds);
+    isUnloadingRef.current = false;
     // Server-provided playback state seeds the client only when navigating to a new video.
     // Local delete/download actions should not be overwritten by player mode changes.
   }, [video.id]);
@@ -468,6 +470,7 @@ export function LearningWorkspace({
     const confirmed = window.confirm("Delete the downloaded video file from local storage?");
     if (!confirmed) return;
 
+    isUnloadingRef.current = true;
     setDownloadBusy(true);
     try {
       if (localVideoRef.current) {
@@ -484,6 +487,7 @@ export function LearningWorkspace({
       setDownloadStatus(data.download);
     } finally {
       setDownloadBusy(false);
+      isUnloadingRef.current = false;
     }
   }
 
@@ -630,6 +634,7 @@ export function LearningWorkspace({
                         }
                       }}
                       onTimeUpdate={(event) => {
+                        if (isUnloadingRef.current) return;
                         const currentTime = event.currentTarget.currentTime;
                         const duration = event.currentTarget.duration;
                         setCurrentPlaybackTime(currentTime);
