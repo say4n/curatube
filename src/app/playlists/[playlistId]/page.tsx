@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getPlaylist, getPlaylistVideos } from "@/lib/db";
+import { getPlaylist, getPlaylistVideoProgress, getPlaylistVideos } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -15,5 +15,12 @@ export default async function PlaylistPage({
   const videos = getPlaylistVideos(playlistId);
   if (videos.length === 0) notFound();
 
-  redirect(`/playlists/${playlistId}/videos/${encodeURIComponent(videos[0].id)}`);
+  const progress = getPlaylistVideoProgress(playlistId);
+  const completedVideoIds = new Set(
+    progress.filter((p) => p.completed).map((p) => p.video_id)
+  );
+
+  const firstUncompleted = videos.find((v) => !completedVideoIds.has(v.id)) || videos[0];
+
+  redirect(`/playlists/${playlistId}/videos/${encodeURIComponent(firstUncompleted.id)}`);
 }
