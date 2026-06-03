@@ -58,6 +58,11 @@ function demoteMarkdownHeadings(markdown: string) {
 }
 
 export function playlistNotesMarkdown(playlist: Playlist, videoNotes: VideoNote[]) {
+  const index = videoNotes.map(({ video }) => {
+    const position = String(video.position).padStart(2, "0");
+    return `- ${position} - ${markdownLinkText(video.title)}`;
+  }).join("\n");
+
   const sections = videoNotes.map(({ video, note }) => {
     const position = String(video.position).padStart(2, "0");
     const body = demoteMarkdownHeadings(note);
@@ -67,7 +72,13 @@ export function playlistNotesMarkdown(playlist: Playlist, videoNotes: VideoNote[
       .join("\n\n");
   });
 
-  return [`# ${playlist.title}`, playlist.source_url, ...sections].join("\n\n").concat("\n");
+  const parts = [`# ${playlist.title}`, playlist.source_url];
+  if (index) {
+    parts.push(`## Index\n\n${index}`);
+  }
+  parts.push(...sections);
+
+  return parts.join("\n\n").concat("\n");
 }
 
 export function markdownFilename(title: string) {
