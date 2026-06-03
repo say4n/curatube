@@ -37,6 +37,7 @@ declare global {
         destroy?: () => void;
         getCurrentTime?: () => number;
         getDuration?: () => number;
+        playVideo?: () => void;
         seekTo: (seconds: number, allowSeekAhead: boolean) => void;
       };
     };
@@ -112,6 +113,7 @@ export function LearningWorkspace({
     destroy?: () => void;
     getCurrentTime?: () => number;
     getDuration?: () => number;
+    playVideo?: () => void;
     seekTo: (seconds: number, allowSeekAhead: boolean) => void;
   } | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -273,6 +275,7 @@ export function LearningWorkspace({
     if (pendingLocalSeek === null || !localVideoReady || !localVideoRef.current) return;
 
     localVideoRef.current.currentTime = pendingLocalSeek;
+    void localVideoRef.current.play().catch(() => {});
     setPendingLocalSeek(null);
   }, [localVideoReady, pendingLocalSeek]);
 
@@ -319,12 +322,14 @@ export function LearningWorkspace({
   function seekTo(seconds: number) {
     if (localVideoReady && localVideoRef.current) {
       localVideoRef.current.currentTime = seconds;
+      void localVideoRef.current.play().catch(() => {});
       setCurrentPlaybackTime(seconds);
     } else if (embedBlocked) {
       setPendingLocalSeek(seconds);
       setCurrentPlaybackTime(seconds);
     } else {
       playerRef.current?.seekTo(seconds, true);
+      playerRef.current?.playVideo?.();
       setCurrentPlaybackTime(seconds);
     }
 
@@ -393,7 +398,7 @@ export function LearningWorkspace({
           courseListOpen ? "block" : "hidden"
         }`}
       >
-        <div className="sticky top-0 max-h-[calc(100vh-65px)] overflow-y-auto p-3">
+        <div className="max-h-[42vh] overflow-y-auto p-3 lg:sticky lg:top-0 lg:max-h-[calc(100vh-65px)]">
           <div className="mb-3 flex items-center justify-between gap-2 px-2">
             <div className="text-xs font-bold uppercase tracking-[0.14em] text-rust">
               Course videos
@@ -436,7 +441,7 @@ export function LearningWorkspace({
               notesOpen ? "xl:grid-cols-[minmax(0,1fr)_420px]" : ""
             }`}
           >
-            <div className="min-w-0 p-4 md:p-6">
+            <div className="min-w-0 p-3 sm:p-4 md:p-6">
               {!courseListOpen ? (
                 <div className="mb-3">
                   <button
@@ -505,7 +510,7 @@ export function LearningWorkspace({
                   </div>
                 ) : null}
               </div>
-              <div className="mt-3 flex flex-col gap-3 rounded-md bg-[#fffdf8] px-1 py-2 lg:flex-row lg:items-center lg:justify-between">
+              <div className="mt-3 flex flex-col gap-3 rounded-md bg-[#fffdf8] px-1 py-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 text-sm font-semibold text-[#6c6257]">
                     {playerReady ? (
@@ -541,7 +546,7 @@ export function LearningWorkspace({
                     </div>
                   ) : null}
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+                <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
                   {embedBlocked ? (
                     <>
                       {downloadStatus?.status === "failed" ||
@@ -646,7 +651,7 @@ export function LearningWorkspace({
               ) : (
                 <div
                   ref={transcriptListRef}
-                  className="max-h-[38vh] overflow-y-auto rounded-md border border-[#d8d1c3] bg-white"
+                  className="max-h-[52vh] overflow-y-auto rounded-md border border-[#d8d1c3] bg-white md:max-h-[38vh]"
                 >
                   {transcriptSegments.map((segment, index) => (
                     <button
@@ -660,7 +665,7 @@ export function LearningWorkspace({
                       }}
                       type="button"
                       onClick={() => seekTo(segment.start_seconds)}
-                      className={`grid w-full grid-cols-[72px_minmax(0,1fr)] gap-3 border-b border-[#eee9de] px-4 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud ${
+                      className={`grid w-full grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-[#eee9de] px-3 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud sm:grid-cols-[72px_minmax(0,1fr)] sm:px-4 ${
                         index === activeTranscriptIndex ? "bg-cloud" : ""
                       }`}
                     >

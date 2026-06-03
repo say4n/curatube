@@ -122,7 +122,7 @@ export function HomePage({ initialPlaylists, initialJobs }: Props) {
                 Curatube
               </div>
             </div>
-            <h1 className="text-4xl font-black leading-tight text-ink md:text-6xl">
+            <h1 className="text-3xl font-black leading-tight text-ink sm:text-4xl md:text-6xl">
               Learn without the distractions.
             </h1>
           </div>
@@ -167,7 +167,7 @@ export function HomePage({ initialPlaylists, initialJobs }: Props) {
                     <span className="font-semibold capitalize">{job.status}</span>
                     <span className="truncate text-[#6c6257]">{job.message ?? job.source_url}</span>
                   </div>
-                  <div className="h-2 min-w-40 overflow-hidden rounded-full bg-cloud">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-cloud md:w-40">
                     <div
                       className="h-full bg-moss transition-all"
                       style={{ width: `${job.progress}%` }}
@@ -181,42 +181,42 @@ export function HomePage({ initialPlaylists, initialJobs }: Props) {
       </section>
 
       <section className="mx-auto max-w-6xl px-5 py-8">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <h2 className="text-2xl font-black text-ink">Imported playlists</h2>
-            <div className="flex items-center gap-3">
-              <div className="inline-flex rounded-md border border-[#d8d1c3] bg-white p-1 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setSortBy("last-watched")}
-                  aria-pressed={sortBy === "last-watched"}
-                  className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold transition ${
-                    sortBy === "last-watched"
-                      ? "bg-ink text-white"
-                      : "text-[#6c6257] hover:bg-cloud hover:text-ink"
-                  }`}
-                >
-                  <Clock size={15} />
-                  Last Watched
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSortBy("date-added")}
-                  aria-pressed={sortBy === "date-added"}
-                  className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold transition ${
-                    sortBy === "date-added"
-                      ? "bg-ink text-white"
-                      : "text-[#6c6257] hover:bg-cloud hover:text-ink"
-                  }`}
-                >
-                  <CalendarDays size={15} />
-                  Date Added
-                </button>
-              </div>
-              <span className="text-sm font-semibold text-[#6c6257]">
-                {playlists.length} courses
-              </span>
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-2xl font-black text-ink">Imported playlists</h2>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <div className="grid grid-cols-2 rounded-md border border-[#d8d1c3] bg-white p-1 shadow-sm sm:inline-grid">
+              <button
+                type="button"
+                onClick={() => setSortBy("last-watched")}
+                aria-pressed={sortBy === "last-watched"}
+                className={`inline-flex h-9 min-w-0 items-center justify-center gap-2 rounded-md px-2 text-sm font-semibold transition sm:px-3 ${
+                  sortBy === "last-watched"
+                    ? "bg-ink text-white"
+                    : "text-[#6c6257] hover:bg-cloud hover:text-ink"
+                }`}
+              >
+                <Clock size={15} className="shrink-0" />
+                <span className="truncate">Last Watched</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortBy("date-added")}
+                aria-pressed={sortBy === "date-added"}
+                className={`inline-flex h-9 min-w-0 items-center justify-center gap-2 rounded-md px-2 text-sm font-semibold transition sm:px-3 ${
+                  sortBy === "date-added"
+                    ? "bg-ink text-white"
+                    : "text-[#6c6257] hover:bg-cloud hover:text-ink"
+                }`}
+              >
+                <CalendarDays size={15} className="shrink-0" />
+                <span className="truncate">Date Added</span>
+              </button>
             </div>
+            <span className="text-sm font-semibold text-[#6c6257]">
+              {playlists.length} courses
+            </span>
           </div>
+        </div>
 
         {playlists.length === 0 ? (
           <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed border-[#c9c0b2] bg-[#fffdf8] px-5 text-center">
