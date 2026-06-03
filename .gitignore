@@ -80,6 +80,7 @@ out
 
 # Local app data
 data/
+!data/demo.json.gz
 
 # Nuxt.js build / generate output
 .nuxt

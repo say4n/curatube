@@ -177,7 +177,9 @@ let demoDataCache: any = null;
 function getDemoData() {
   if (demoDataCache) return demoDataCache;
   try {
-    const demoPath = path.join(dataDir, "demo.json.gz");
+    const demoPath = process.env.VERCEL
+      ? path.join(process.cwd(), "data", "demo.json.gz")
+      : path.join(dataDir, "demo.json.gz");
     const compressed = fs.readFileSync(demoPath);
     const jsonString = require("zlib").gunzipSync(compressed).toString("utf-8");
     demoDataCache = JSON.parse(jsonString);
