@@ -108,6 +108,7 @@ export type Playlist = {
   import_error: string | null;
   created_at: string;
   updated_at: string;
+  last_watched_at: string | null;
 };
 
 export type Video = {
@@ -164,7 +165,16 @@ export type VideoProgress = {
 export function getPlaylists() {
   return db
     .prepare(
-      `SELECT * FROM playlists ORDER BY datetime(updated_at) DESC, title ASC`
+      `SELECT
+         p.*,
+         (
+           SELECT MAX(vp.updated_at)
+           FROM videos v
+           JOIN video_progress vp ON vp.video_id = v.id
+           WHERE v.playlist_id = p.id
+         ) AS last_watched_at
+       FROM playlists p
+       ORDER BY datetime(p.updated_at) DESC, p.title ASC`
     )
     .all() as Playlist[];
 }
@@ -187,9 +197,20 @@ export function getImportJob(id: string) {
 }
 
 export function getPlaylist(id: string) {
-  return db.prepare(`SELECT * FROM playlists WHERE id = ?`).get(id) as
-    | Playlist
-    | undefined;
+  return db
+    .prepare(
+      `SELECT
+         p.*,
+         (
+           SELECT MAX(vp.updated_at)
+           FROM videos v
+           JOIN video_progress vp ON vp.video_id = v.id
+           WHERE v.playlist_id = p.id
+         ) AS last_watched_at
+       FROM playlists p
+       WHERE p.id = ?`
+    )
+    .get(id) as Playlist | undefined;
 }
 
 export function getPlaylistVideos(playlistId: string) {

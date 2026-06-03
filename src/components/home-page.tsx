@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, Clock, Loader2, Plus } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, Clock, Loader2, Plus } from "lucide-react";
 import type { ImportJob, Playlist } from "@/lib/db";
 
 type Props = {
@@ -10,16 +11,47 @@ type Props = {
   initialJobs: ImportJob[];
 };
 
+type PlaylistSort = "last-watched" | "date-added";
+
+function parseDate(value: string | null | undefined) {
+  if (!value) return Number.NEGATIVE_INFINITY;
+  return Date.parse(value.replace(" ", "T") + "Z");
+}
+
 export function HomePage({ initialPlaylists, initialJobs }: Props) {
   const [url, setUrl] = useState("");
   const [jobs, setJobs] = useState(initialJobs);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sortBy, setSortBy] = useState<PlaylistSort>("last-watched");
 
   const activeJobs = useMemo(
     () => jobs.filter((job) => job.status === "queued" || job.status === "running"),
     [jobs]
   );
+
+  const playlists = useMemo(() => {
+    const sorted = [...initialPlaylists];
+
+    sorted.sort((left, right) => {
+      if (sortBy === "date-added") {
+        const createdDifference =
+          parseDate(right.created_at) - parseDate(left.created_at);
+        if (createdDifference !== 0) return createdDifference;
+      } else {
+        const watchedDifference =
+          parseDate(right.last_watched_at) - parseDate(left.last_watched_at);
+        if (watchedDifference !== 0) return watchedDifference;
+      }
+
+      const fallbackDifference = parseDate(right.created_at) - parseDate(left.created_at);
+      if (fallbackDifference !== 0) return fallbackDifference;
+
+      return left.title.localeCompare(right.title);
+    });
+
+    return sorted;
+  }, [initialPlaylists, sortBy]);
 
   useEffect(() => {
     if (activeJobs.length === 0) return;
@@ -77,9 +109,19 @@ export function HomePage({ initialPlaylists, initialJobs }: Props) {
       <section className="border-b border-[#d8d1c3] bg-[#fffdf8]">
         <div className="mx-auto max-w-6xl px-5 py-10 md:py-14">
           <div className="mb-8 max-w-3xl">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-rust">
-              Curatube
-            </p>
+            <div className="mb-4 flex items-center gap-4">
+              <Image
+                src="/icon.svg"
+                alt=""
+                width={56}
+                height={56}
+                className="h-14 w-14 shrink-0 rounded-[16px] shadow-sm"
+                priority
+              />
+              <div className="text-sm font-semibold uppercase tracking-[0.16em] text-rust">
+                Curatube
+              </div>
+            </div>
             <h1 className="text-4xl font-black leading-tight text-ink md:text-6xl">
               Learn without the distractions.
             </h1>
@@ -139,14 +181,44 @@ export function HomePage({ initialPlaylists, initialJobs }: Props) {
       </section>
 
       <section className="mx-auto max-w-6xl px-5 py-8">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <h2 className="text-2xl font-black text-ink">Imported playlists</h2>
-          <span className="text-sm font-semibold text-[#6c6257]">
-            {initialPlaylists.length} courses
-          </span>
-        </div>
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <h2 className="text-2xl font-black text-ink">Imported playlists</h2>
+            <div className="flex items-center gap-3">
+              <div className="inline-flex rounded-md border border-[#d8d1c3] bg-white p-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setSortBy("last-watched")}
+                  aria-pressed={sortBy === "last-watched"}
+                  className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold transition ${
+                    sortBy === "last-watched"
+                      ? "bg-ink text-white"
+                      : "text-[#6c6257] hover:bg-cloud hover:text-ink"
+                  }`}
+                >
+                  <Clock size={15} />
+                  Last Watched
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortBy("date-added")}
+                  aria-pressed={sortBy === "date-added"}
+                  className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold transition ${
+                    sortBy === "date-added"
+                      ? "bg-ink text-white"
+                      : "text-[#6c6257] hover:bg-cloud hover:text-ink"
+                  }`}
+                >
+                  <CalendarDays size={15} />
+                  Date Added
+                </button>
+              </div>
+              <span className="text-sm font-semibold text-[#6c6257]">
+                {playlists.length} courses
+              </span>
+            </div>
+          </div>
 
-        {initialPlaylists.length === 0 ? (
+        {playlists.length === 0 ? (
           <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed border-[#c9c0b2] bg-[#fffdf8] px-5 text-center">
             <BookOpen className="mb-4 text-moss" size={34} />
             <p className="max-w-md text-base font-semibold text-ink">
@@ -155,7 +227,7 @@ export function HomePage({ initialPlaylists, initialJobs }: Props) {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {initialPlaylists.map((playlist) => (
+            {playlists.map((playlist) => (
               <Link
                 key={playlist.id}
                 href={`/playlists/${playlist.id}`}
