@@ -5,7 +5,10 @@ import { ServiceWorkerCleanup } from "@/components/service-worker-cleanup";
 
 export const metadata: Metadata = {
   title: "Curatube",
-  description: "A distraction free learning environment for YouTube courses"
+  description: "A distraction free learning environment for YouTube courses",
+  icons: {
+    icon: "/icon.svg"
+  }
 };
 
 export default function RootLayout({
