@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, CalendarDays, Clock, Download, Loader2, Plus } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, Clock, Loader2, Plus } from "lucide-react";
 import type { ImportJob, Playlist } from "@/lib/db";
+import { ExportNotesButtons } from "./export-notes-buttons";
 
 type Props = {
   initialPlaylists: Playlist[];
@@ -264,15 +265,7 @@ export function HomePage({ initialPlaylists, initialJobs }: Props) {
                     {playlist.channel ?? "YouTube playlist"}
                   </p>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <a
-                      href={`/api/playlists/${encodeURIComponent(playlist.id)}/notes/export`}
-                      download
-                      aria-label={`Export notes for ${playlist.title}`}
-                      title="Export notes"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud"
-                    >
-                      <Download size={16} />
-                    </a>
+                    <ExportNotesButtons playlistId={playlist.id} playlistTitle={playlist.title} />
                     <Link
                       href={`/playlists/${playlist.id}`}
                       aria-label={`Open ${playlist.title}`}
