@@ -2,8 +2,7 @@
 
 A distraction-free learning environment for YouTube playlists.
 
-<img src="/assets/homepage.png" width="50%" alt="curatube homepage">
-<img src="/assets/playlist.png" width="50%" alt="curatube playlist view with notes and timestamps">
+<img src="/assets/homepage.png" width="48%" alt="curatube homepage"> <img src="/assets/playlist.png" width="48%" alt="curatube playlist view with notes and timestamps">
 
 ## Development
 
