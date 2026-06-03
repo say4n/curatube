@@ -142,6 +142,16 @@ export function LearningWorkspace({
   }, [transcript, video.id]);
 
   useEffect(() => {
+    setPlayerReady(false);
+    setEmbedBlocked(false);
+    setDownloadStatus(initialDownloadStatus);
+    setPendingLocalSeek(null);
+    setCurrentPlaybackTime(initialProgressSeconds);
+    // Server-provided playback state seeds the client only when navigating to a new video.
+    // Local delete/download actions should not be overwritten by player mode changes.
+  }, [video.id]);
+
+  useEffect(() => {
     setCourseListOpen(window.matchMedia("(min-width: 1024px)").matches);
   }, []);
 
@@ -149,9 +159,6 @@ export function LearningWorkspace({
     let cancelled = false;
     setPlayerReady(false);
     setEmbedBlocked(false);
-    setDownloadStatus(initialDownloadStatus);
-    setPendingLocalSeek(null);
-    setCurrentPlaybackTime(initialProgressSeconds);
 
     if (!shouldUseYouTubePlayer) {
       setPlayerReady(true);
@@ -199,7 +206,7 @@ export function LearningWorkspace({
       }
       playerRef.current = null;
     };
-  }, [initialDownloadStatus, initialProgressSeconds, playerElementId, shouldUseYouTubePlayer, video.youtube_id]);
+  }, [initialProgressSeconds, playerElementId, shouldUseYouTubePlayer, video.youtube_id]);
 
   useEffect(() => {
     if (!playerReady || embedBlocked || localVideoReady) return;
