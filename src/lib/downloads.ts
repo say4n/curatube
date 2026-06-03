@@ -8,9 +8,12 @@ import { mediaDir } from "./paths";
 
 const execFileAsync = promisify(execFile);
 const runningDownloads = new Set<string>();
+const runningPreparations = new Map<string, Promise<VideoDownload>>();
 const mediaRoot = mediaDir;
 const videoExtensions = new Set([".mp4", ".webm", ".mkv", ".mov"]);
 const preferredDownloadFormat =
+  "bv*[vcodec^=avc1][ext=mp4][height<=1440][fps<=60]+ba[acodec^=mp4a][ext=m4a]/" +
+  "b[vcodec^=avc1][acodec^=mp4a][ext=mp4][height<=1440][fps<=60]/" +
   "bv*[ext=mp4][height<=1440][fps<=60]+ba[ext=m4a]/" +
   "b[ext=mp4][height<=1440][fps<=60]/" +
   "bv*[height<=1440][fps<=60]+ba/" +
@@ -89,11 +92,72 @@ async function findDownloadedFile(directory: string) {
   return files.sort((a, b) => b.size - a.size)[0] ?? null;
 }
 
-async function optimizeMp4ForStreaming(filePath: string) {
-  if (path.extname(filePath).toLowerCase() !== ".mp4") return filePath;
-  if (await isMp4OptimizedForStreaming(filePath)) return filePath;
+type MediaInfo = {
+  streams?: Array<{
+    codec_name?: string;
+    codec_type?: string;
+  }>;
+};
 
-  const temporaryPath = `${filePath}.faststart.mp4`;
+async function readMediaInfo(filePath: string) {
+  const { stdout } = await execFileAsync(
+    "ffprobe",
+    [
+      "-v",
+      "error",
+      "-show_entries",
+      "stream=codec_type,codec_name",
+      "-of",
+      "json",
+      filePath
+    ],
+    { maxBuffer: 4 * 1024 * 1024 }
+  );
+
+  return JSON.parse(stdout) as MediaInfo;
+}
+
+function isSafariCompatibleMp4(filePath: string, mediaInfo: MediaInfo) {
+  if (path.extname(filePath).toLowerCase() !== ".mp4") return false;
+
+  const streams = mediaInfo.streams ?? [];
+  const video = streams.find((stream) => stream.codec_type === "video");
+  const audioStreams = streams.filter((stream) => stream.codec_type === "audio");
+
+  return (
+    video?.codec_name === "h264" &&
+    audioStreams.every((stream) => stream.codec_name === "aac")
+  );
+}
+
+async function optimizeMp4ForStreaming(filePath: string) {
+  const mediaInfo = await readMediaInfo(filePath);
+  const safariCompatible = isSafariCompatibleMp4(filePath, mediaInfo);
+
+  if (safariCompatible && (await isMp4OptimizedForStreaming(filePath))) {
+    return filePath;
+  }
+
+  const extension = path.extname(filePath);
+  const basePath = filePath.slice(0, -extension.length);
+  const finalPath = extension.toLowerCase() === ".mp4" ? filePath : `${basePath}.mp4`;
+  const temporaryPath = `${finalPath}.${process.pid}.${Date.now()}.tmp.mp4`;
+  const codecArgs = safariCompatible
+    ? ["-c", "copy"]
+    : [
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "20",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "160k"
+      ];
 
   try {
     await execFileAsync(
@@ -109,8 +173,7 @@ async function optimizeMp4ForStreaming(filePath: string) {
         "0:v:0",
         "-map",
         "0:a?",
-        "-c",
-        "copy",
+        ...codecArgs,
         "-movflags",
         "+faststart",
         temporaryPath
@@ -118,13 +181,14 @@ async function optimizeMp4ForStreaming(filePath: string) {
       { maxBuffer: 16 * 1024 * 1024 }
     );
 
-    await fsp.rename(temporaryPath, filePath);
+    await fsp.rm(filePath, { force: true });
+    await fsp.rename(temporaryPath, finalPath);
   } catch (error) {
     await fsp.rm(temporaryPath, { force: true });
     throw error;
   }
 
-  return filePath;
+  return finalPath;
 }
 
 async function isMp4OptimizedForStreaming(filePath: string) {
@@ -144,7 +208,7 @@ async function isMp4OptimizedForStreaming(filePath: string) {
   }
 }
 
-export async function prepareVideoDownloadForStreaming(videoId: string) {
+async function prepareVideoDownloadForStreamingNow(videoId: string) {
   const download = refreshDownloadStatus(videoId);
 
   if (download.status !== "ready" || !download.file_path) {
@@ -154,8 +218,9 @@ export async function prepareVideoDownloadForStreaming(videoId: string) {
   const playableFilePath = await optimizeMp4ForStreaming(download.file_path);
   const playableStats = await fsp.stat(playableFilePath);
 
-  if (playableStats.size !== download.file_size_bytes) {
+  if (playableFilePath !== download.file_path || playableStats.size !== download.file_size_bytes) {
     setDownload(videoId, {
+      file_path: playableFilePath,
       file_size_bytes: playableStats.size,
       mime_type: mimeTypeFor(playableFilePath),
       error: null
@@ -163,6 +228,18 @@ export async function prepareVideoDownloadForStreaming(videoId: string) {
   }
 
   return getVideoDownload(videoId)!;
+}
+
+export async function prepareVideoDownloadForStreaming(videoId: string) {
+  const existing = runningPreparations.get(videoId);
+  if (existing) return existing;
+
+  const preparation = prepareVideoDownloadForStreamingNow(videoId).finally(() => {
+    runningPreparations.delete(videoId);
+  });
+  runningPreparations.set(videoId, preparation);
+
+  return preparation;
 }
 
 export function getMediaRoot() {

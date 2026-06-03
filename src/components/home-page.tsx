@@ -15,7 +15,9 @@ type PlaylistSort = "last-watched" | "date-added";
 
 function parseDate(value: string | null | undefined) {
   if (!value) return Number.NEGATIVE_INFINITY;
-  return Date.parse(value.replace(" ", "T") + "Z");
+  const normalized = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
+  const timestamp = Date.parse(normalized);
+  return Number.isNaN(timestamp) ? Number.NEGATIVE_INFINITY : timestamp;
 }
 
 export function HomePage({ initialPlaylists, initialJobs }: Props) {

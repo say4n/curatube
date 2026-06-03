@@ -92,11 +92,6 @@ function formatBytes(bytes: number | null) {
   return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
-function shouldOpenCourseListByDefault() {
-  if (typeof window === "undefined") return true;
-  return window.matchMedia("(min-width: 1024px)").matches;
-}
-
 export function LearningWorkspace({
   playlist,
   videos,
@@ -107,7 +102,7 @@ export function LearningWorkspace({
   initialDownloadStatus
 }: Props) {
   const [notesOpen, setNotesOpen] = useState(true);
-  const [courseListOpen, setCourseListOpen] = useState(shouldOpenCourseListByDefault);
+  const [courseListOpen, setCourseListOpen] = useState(false);
   const [transcriptSegments, setTranscriptSegments] = useState(transcript);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
@@ -145,6 +140,10 @@ export function LearningWorkspace({
   useEffect(() => {
     setTranscriptSegments(transcript);
   }, [transcript, video.id]);
+
+  useEffect(() => {
+    setCourseListOpen(window.matchMedia("(min-width: 1024px)").matches);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -505,6 +504,7 @@ export function LearningWorkspace({
                       className="absolute inset-0 h-full w-full"
                       controls
                       playsInline
+                      preload="auto"
                       onError={() => {
                         void refreshDownloadStatus();
                       }}
