@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, CalendarDays, Clock, Loader2, Plus } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, Clock, Download, Loader2, Plus } from "lucide-react";
 import type { ImportJob, Playlist } from "@/lib/db";
 
 type Props = {
@@ -230,44 +230,63 @@ export function HomePage({ initialPlaylists, initialJobs }: Props) {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {playlists.map((playlist) => (
-              <Link
+              <article
                 key={playlist.id}
-                href={`/playlists/${playlist.id}`}
                 className="group overflow-hidden rounded-md border border-[#d8d1c3] bg-[#fffdf8] shadow-sm transition hover:-translate-y-0.5 hover:border-moss hover:shadow-md"
               >
-                <div className="aspect-video bg-cloud">
-                  {playlist.thumbnail_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={playlist.thumbnail_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-moss">
-                      <BookOpen size={42} />
+                <Link href={`/playlists/${playlist.id}`} className="block">
+                  <div className="aspect-video bg-cloud">
+                    {playlist.thumbnail_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={playlist.thumbnail_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-moss">
+                        <BookOpen size={42} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 pb-2">
+                    <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-rust">
+                      <span>{playlist.video_count} videos</span>
+                      <span>{playlist.import_status}</span>
                     </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-rust">
-                    <span>{playlist.video_count} videos</span>
-                    <span>{playlist.import_status}</span>
+                    <h3 className="line-clamp-2 min-h-12 text-lg font-black leading-snug text-ink">
+                      {playlist.title}
+                    </h3>
                   </div>
-                  <h3 className="line-clamp-2 min-h-12 text-lg font-black leading-snug text-ink">
-                    {playlist.title}
-                  </h3>
-                  <div className="mt-4 flex items-center justify-between gap-3">
-                    <p className="truncate text-sm font-medium text-[#6c6257]">
-                      {playlist.channel ?? "YouTube playlist"}
-                    </p>
-                    <ArrowRight
-                      size={18}
-                      className="shrink-0 text-moss transition group-hover:translate-x-1"
-                    />
+                </Link>
+                <div className="flex items-center justify-between gap-3 px-4 pb-4">
+                  <p className="min-w-0 truncate text-sm font-medium text-[#6c6257]">
+                    {playlist.channel ?? "YouTube playlist"}
+                  </p>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <a
+                      href={`/api/playlists/${encodeURIComponent(playlist.id)}/notes/export`}
+                      download
+                      aria-label={`Export notes for ${playlist.title}`}
+                      title="Export notes"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud"
+                    >
+                      <Download size={16} />
+                    </a>
+                    <Link
+                      href={`/playlists/${playlist.id}`}
+                      aria-label={`Open ${playlist.title}`}
+                      title="Open course"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-ink text-white transition hover:bg-moss"
+                    >
+                      <ArrowRight
+                        size={17}
+                        className="transition group-hover:translate-x-0.5"
+                      />
+                    </Link>
                   </div>
                 </div>
-              </Link>
+              </article>
             ))}
           </div>
         )}

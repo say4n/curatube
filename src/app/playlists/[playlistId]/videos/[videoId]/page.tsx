@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { LearningWorkspace } from "@/components/learning-workspace";
 import {
   getNote,
@@ -63,6 +63,15 @@ export default async function VideoPage({
             <p className="truncate text-sm font-semibold text-moss">{playlist.title}</p>
             <h1 className="truncate text-base font-bold text-ink">{video.title}</h1>
           </div>
+          <a
+            href={`/api/playlists/${encodeURIComponent(playlist.id)}/notes/export`}
+            download
+            className="ml-auto inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-sm font-bold text-ink transition hover:bg-cloud"
+          >
+            <Download size={17} />
+            <span className="hidden sm:inline">Export notes</span>
+            <span className="sm:hidden">Export</span>
+          </a>
         </div>
       </div>
 
