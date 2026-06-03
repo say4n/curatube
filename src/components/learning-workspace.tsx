@@ -203,14 +203,12 @@ export function LearningWorkspace({
         playerVars: {
           modestbranding: 1,
           rel: 0,
-          playsinline: 1
+          playsinline: 1,
+          ...(initialProgressSeconds > 5 ? { start: Math.floor(initialProgressSeconds) } : {})
         },
         events: {
           onReady: () => {
             setPlayerReady(true);
-            if (initialProgressSeconds > 5) {
-              playerRef.current?.seekTo(initialProgressSeconds, true);
-            }
           },
           onError: (event) => {
             if (event.data === 101 || event.data === 150) {
