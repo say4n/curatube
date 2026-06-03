@@ -318,3 +318,26 @@ export function getVideoProgress(videoId: string) {
     .prepare(`SELECT * FROM video_progress WHERE video_id = ?`)
     .get(videoId) as VideoProgress | undefined;
 }
+
+export function getPlaylistVideoProgress(playlistId: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    const videoIds = new Set(
+      (getDemoData().videos || [])
+        .filter((video: any) => video.playlist_id === playlistId)
+        .map((video: any) => video.id)
+    );
+
+    return (getDemoData().video_progress || []).filter((progress: any) =>
+      videoIds.has(progress.video_id)
+    ) as VideoProgress[];
+  }
+
+  return db
+    .prepare(
+      `SELECT vp.*
+       FROM video_progress vp
+       JOIN videos v ON v.id = vp.video_id
+       WHERE v.playlist_id = ?`
+    )
+    .all(playlistId) as VideoProgress[];
+}

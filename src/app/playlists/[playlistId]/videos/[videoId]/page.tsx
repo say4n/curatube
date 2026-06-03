@@ -5,6 +5,7 @@ import { LearningWorkspace } from "@/components/learning-workspace";
 import {
   getNote,
   getPlaylist,
+  getPlaylistVideoProgress,
   getPlaylistVideos,
   getVideoDownload,
   getVideoProgress,
@@ -35,6 +36,7 @@ export default async function VideoPage({
 
   const transcript = getTranscript(video.id);
   const note = getNote(video.id);
+  const videoProgress = getPlaylistVideoProgress(playlistId);
   const progress = getVideoProgress(video.id);
   const download = getVideoDownload(video.id);
   const refreshedDownload =
@@ -82,6 +84,7 @@ export default async function VideoPage({
         transcript={transcript}
         initialNote={note}
         initialProgressSeconds={progress?.position_seconds ?? 0}
+        initialVideoProgress={videoProgress}
         initialDownloadStatus={initialDownloadStatus}
       />
     </main>

@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Circle,
   Download,
   ExternalLink,
   FileText,
@@ -15,7 +17,7 @@ import {
   RefreshCw,
   Trash2
 } from "lucide-react";
-import type { Playlist, TranscriptSegment, Video } from "@/lib/db";
+import type { Playlist, TranscriptSegment, Video, VideoProgress } from "@/lib/db";
 import { formatTimestamp } from "@/lib/time";
 import { NoteEditor } from "./note-editor";
 
@@ -52,6 +54,7 @@ type Props = {
   transcript: TranscriptSegment[];
   initialNote: string;
   initialProgressSeconds: number;
+  initialVideoProgress: VideoProgress[];
   initialDownloadStatus: DownloadStatus | null;
 };
 
@@ -99,6 +102,7 @@ export function LearningWorkspace({
   transcript,
   initialNote,
   initialProgressSeconds,
+  initialVideoProgress,
   initialDownloadStatus
 }: Props) {
   const [notesOpen, setNotesOpen] = useState(true);
@@ -111,6 +115,11 @@ export function LearningWorkspace({
   const [downloadBusy, setDownloadBusy] = useState(false);
   const [pendingLocalSeek, setPendingLocalSeek] = useState<number | null>(null);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(initialProgressSeconds);
+  const [videoCompletion, setVideoCompletion] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      initialVideoProgress.map((progress) => [progress.video_id, progress.completed === 1])
+    )
+  );
   const playerRef = useRef<{
     destroy?: () => void;
     getCurrentTime?: () => number;
@@ -141,6 +150,14 @@ export function LearningWorkspace({
   useEffect(() => {
     setTranscriptSegments(transcript);
   }, [transcript, video.id]);
+
+  useEffect(() => {
+    setVideoCompletion(
+      Object.fromEntries(
+        initialVideoProgress.map((progress) => [progress.video_id, progress.completed === 1])
+      )
+    );
+  }, [initialVideoProgress]);
 
   useEffect(() => {
     setPlayerReady(false);
@@ -200,6 +217,7 @@ export function LearningWorkspace({
           },
           onStateChange: (event) => {
             if (event.data === 0) {
+              setVideoCompletion((current) => ({ ...current, [video.id]: true }));
               void saveProgress(true);
             }
           }
@@ -331,7 +349,7 @@ export function LearningWorkspace({
     }, 900);
   }
 
-  async function saveProgress(completed = false, positionOverride?: number, durationOverride?: number | null) {
+  async function saveProgress(completed?: boolean, positionOverride?: number, durationOverride?: number | null) {
     const position =
       positionOverride ??
       (localVideoReady
@@ -343,7 +361,7 @@ export function LearningWorkspace({
 
     if (typeof position !== "number" || Number.isNaN(position) || position < 0) return;
 
-    await fetch(`/api/videos/${encodedVideoId}/progress`, {
+    const response = await fetch(`/api/videos/${encodedVideoId}/progress`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -352,9 +370,40 @@ export function LearningWorkspace({
           typeof duration === "number" && Number.isFinite(duration) && duration > 0
             ? duration
             : null,
-        completed
+        ...(typeof completed === "boolean" ? { completed } : {})
       })
     });
+
+    if (!response.ok) return;
+
+    const data = (await response.json()) as { progress: VideoProgress | null };
+    if (data.progress?.completed === 1) {
+      setVideoCompletion((current) => ({ ...current, [data.progress!.video_id]: true }));
+    }
+  }
+
+  async function toggleVideoCompletion(targetVideoId: string) {
+    const nextCompleted = !videoCompletion[targetVideoId];
+    setVideoCompletion((current) => ({ ...current, [targetVideoId]: nextCompleted }));
+
+    const response = await fetch(`/api/videos/${encodeURIComponent(targetVideoId)}/progress`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: nextCompleted })
+    });
+
+    if (!response.ok) {
+      setVideoCompletion((current) => ({ ...current, [targetVideoId]: !nextCompleted }));
+      return;
+    }
+
+    const data = (await response.json()) as { progress: VideoProgress | null };
+    if (data.progress) {
+      setVideoCompletion((current) => ({
+        ...current,
+        [data.progress!.video_id]: data.progress!.completed === 1
+      }));
+    }
   }
 
   async function refreshTranscript() {
@@ -464,23 +513,72 @@ export function LearningWorkspace({
               <PanelLeftClose size={16} />
             </button>
           </div>
-          <div className="grid gap-1">
-            {videos.map((item) => (
-              <Link
-                key={item.id}
-                href={`/playlists/${playlist.id}/videos/${encodeURIComponent(item.id)}`}
-                className={`rounded-md px-3 py-2 text-sm transition ${
-                  item.id === video.id
-                    ? "bg-ink text-white"
-                    : "text-[#413a33] hover:bg-cloud"
-                }`}
-              >
-                <span className="mb-1 block text-xs font-bold opacity-70">
-                  {String(item.position).padStart(2, "0")}
-                </span>
-                <span className="line-clamp-2 font-semibold leading-snug">{item.title}</span>
-              </Link>
-            ))}
+          <div className="grid gap-1.5">
+            {videos.map((item) => {
+              const completed = videoCompletion[item.id] === true;
+
+              return (
+                <div
+                  key={item.id}
+                  className={`grid grid-cols-[64px_minmax(0,1fr)_32px] items-center gap-2 rounded-md p-1.5 text-sm transition ${
+                    item.id === video.id
+                      ? "bg-ink text-white"
+                      : "text-[#413a33] hover:bg-cloud"
+                  }`}
+                >
+                  <Link
+                    href={`/playlists/${playlist.id}/videos/${encodeURIComponent(item.id)}`}
+                    className="relative block aspect-video overflow-hidden rounded bg-cloud"
+                  >
+                    {item.thumbnail_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.thumbnail_url}
+                        alt=""
+                        className={`h-full w-full object-cover transition ${
+                          completed ? "grayscale opacity-45" : ""
+                        }`}
+                      />
+                    ) : (
+                      <div
+                        className={`flex h-full items-center justify-center bg-[#e8e1d6] text-moss transition ${
+                          completed ? "grayscale opacity-45" : ""
+                        }`}
+                      >
+                        <FileText size={18} />
+                      </div>
+                    )}
+                  </Link>
+                  <Link
+                    href={`/playlists/${playlist.id}/videos/${encodeURIComponent(item.id)}`}
+                    className={`min-w-0 rounded px-1 py-1 transition ${completed ? "opacity-55" : ""}`}
+                  >
+                    <span className="mb-0.5 block text-xs font-bold opacity-70">
+                      {String(item.position).padStart(2, "0")}
+                    </span>
+                    <span className="line-clamp-2 font-semibold leading-snug">{item.title}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void toggleVideoCompletion(item.id);
+                    }}
+                    aria-pressed={completed}
+                    aria-label={completed ? "Mark video incomplete" : "Mark video complete"}
+                    title={completed ? "Mark incomplete" : "Mark complete"}
+                    className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition ${
+                      item.id === video.id
+                        ? "bg-white/10 text-white hover:bg-white/20"
+                        : completed
+                          ? "bg-moss text-white hover:bg-moss/85"
+                          : "border border-[#c9c0b2] bg-white text-[#6c6257] hover:bg-cloud hover:text-ink"
+                    }`}
+                  >
+                    {completed ? <CheckCircle2 size={17} /> : <Circle size={17} />}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </aside>
@@ -533,15 +631,26 @@ export function LearningWorkspace({
                       }}
                       onTimeUpdate={(event) => {
                         const currentTime = event.currentTarget.currentTime;
+                        const duration = event.currentTarget.duration;
                         setCurrentPlaybackTime(currentTime);
+                        if (
+                          !videoCompletion[video.id] &&
+                          Number.isFinite(duration) &&
+                          duration > 0 &&
+                          currentTime / duration >= 0.95
+                        ) {
+                          setVideoCompletion((current) => ({ ...current, [video.id]: true }));
+                          void saveProgress(undefined, currentTime, duration);
+                        }
                         if (Math.floor(currentTime) % 5 === 0) {
-                          void saveProgress(false, currentTime, event.currentTarget.duration);
+                          void saveProgress(undefined, currentTime, duration);
                         }
                       }}
                       onPause={(event) => {
-                        void saveProgress(false, event.currentTarget.currentTime, event.currentTarget.duration);
+                        void saveProgress(undefined, event.currentTarget.currentTime, event.currentTarget.duration);
                       }}
                       onEnded={(event) => {
+                        setVideoCompletion((current) => ({ ...current, [video.id]: true }));
                         void saveProgress(true, event.currentTarget.currentTime, event.currentTarget.duration);
                       }}
                     />

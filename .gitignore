@@ -81,6 +81,7 @@ out
 # Local app data
 data/
 !data/demo.json.gz
+.antigravitycli/
 
 # Nuxt.js build / generate output
 .nuxt
