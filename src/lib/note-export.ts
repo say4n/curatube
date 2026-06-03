@@ -57,10 +57,18 @@ function demoteMarkdownHeadings(markdown: string) {
   return output.join("\n").trim();
 }
 
+function slugifyHeading(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\- ]/g, "")
+    .replace(/ /g, "-");
+}
+
 export function playlistNotesMarkdown(playlist: Playlist, videoNotes: VideoNote[]) {
   const index = videoNotes.map(({ video }) => {
     const position = String(video.position).padStart(2, "0");
-    return `- ${position} - ${markdownLinkText(video.title)}`;
+    const rawHeading = `${position} - ${video.title}`;
+    return `- [${position} - ${markdownLinkText(video.title)}](#${slugifyHeading(rawHeading)})`;
   }).join("\n");
 
   const sections = videoNotes.map(({ video, note }) => {
