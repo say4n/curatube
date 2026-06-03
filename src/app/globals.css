@@ -59,6 +59,19 @@ iframe {
   padding-left: 1.25rem;
 }
 
+.prose-note ul {
+  list-style: disc;
+}
+
+.prose-note ol {
+  list-style: decimal;
+}
+
+.prose-note li {
+  margin: 0.25rem 0;
+  padding-left: 0.15rem;
+}
+
 .prose-note code {
   border-radius: 4px;
   background: #ece8df;
@@ -88,4 +101,3 @@ iframe {
   border: 1px solid #d8d1c3;
   padding: 0.35rem 0.5rem;
 }
-

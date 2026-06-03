@@ -91,6 +91,11 @@ function formatBytes(bytes: number | null) {
   return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
+function shouldOpenCourseListByDefault() {
+  if (typeof window === "undefined") return true;
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
 export function LearningWorkspace({
   playlist,
   videos,
@@ -100,7 +105,7 @@ export function LearningWorkspace({
   initialProgressSeconds
 }: Props) {
   const [notesOpen, setNotesOpen] = useState(true);
-  const [courseListOpen, setCourseListOpen] = useState(true);
+  const [courseListOpen, setCourseListOpen] = useState(shouldOpenCourseListByDefault);
   const [transcriptSegments, setTranscriptSegments] = useState(transcript);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
@@ -274,10 +279,29 @@ export function LearningWorkspace({
   useEffect(() => {
     if (pendingLocalSeek === null || !localVideoReady || !localVideoRef.current) return;
 
-    localVideoRef.current.currentTime = pendingLocalSeek;
-    void localVideoRef.current.play().catch(() => {});
+    playLocalVideoFrom(pendingLocalSeek);
     setPendingLocalSeek(null);
   }, [localVideoReady, pendingLocalSeek]);
+
+  function playLocalVideoFrom(seconds: number) {
+    const element = localVideoRef.current;
+    if (!element) return;
+
+    const playAfterSeek = () => {
+      element.removeEventListener("seeked", playAfterSeek);
+      void element.play().catch(() => {});
+    };
+
+    element.pause();
+    element.addEventListener("seeked", playAfterSeek, { once: true });
+    element.currentTime = seconds;
+    window.setTimeout(() => {
+      element.removeEventListener("seeked", playAfterSeek);
+      if (Math.abs(element.currentTime - seconds) < 0.75) {
+        void element.play().catch(() => {});
+      }
+    }, 900);
+  }
 
   async function saveProgress(completed = false, positionOverride?: number, durationOverride?: number | null) {
     const position =
@@ -321,8 +345,7 @@ export function LearningWorkspace({
 
   function seekTo(seconds: number) {
     if (localVideoReady && localVideoRef.current) {
-      localVideoRef.current.currentTime = seconds;
-      void localVideoRef.current.play().catch(() => {});
+      playLocalVideoFrom(seconds);
       setCurrentPlaybackTime(seconds);
     } else if (embedBlocked) {
       setPendingLocalSeek(seconds);

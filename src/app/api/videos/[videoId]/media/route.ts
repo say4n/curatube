@@ -10,6 +10,32 @@ function streamFile(filePath: string, start: number, end: number) {
   return Readable.toWeb(fs.createReadStream(filePath, { start, end })) as ReadableStream;
 }
 
+function parseRange(range: string, fileSize: number) {
+  const match = range.match(/^bytes=(\d*)-(\d*)$/);
+  if (!match) return null;
+
+  const [, rawStart, rawEnd] = match;
+
+  if (!rawStart && !rawEnd) return null;
+
+  if (!rawStart) {
+    const suffixLength = Number.parseInt(rawEnd, 10);
+    if (!Number.isFinite(suffixLength) || suffixLength <= 0) return null;
+
+    const start = Math.max(fileSize - suffixLength, 0);
+    return { start, end: fileSize - 1 };
+  }
+
+  const start = Number.parseInt(rawStart, 10);
+  const end = rawEnd ? Math.min(Number.parseInt(rawEnd, 10), fileSize - 1) : fileSize - 1;
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= fileSize) {
+    return null;
+  }
+
+  return { start, end };
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ videoId: string }> }
@@ -41,20 +67,16 @@ export async function GET(
   const range = request.headers.get("range");
 
   if (range) {
-    const match = range.match(/bytes=(\d*)-(\d*)/);
-    if (!match) {
-      return new Response(null, { status: 416 });
-    }
+    const byteRange = parseRange(range, fileSize);
 
-    const start = match[1] ? Number.parseInt(match[1], 10) : 0;
-    const end = match[2] ? Number.parseInt(match[2], 10) : fileSize - 1;
-
-    if (Number.isNaN(start) || Number.isNaN(end) || start >= fileSize || end >= fileSize) {
+    if (!byteRange) {
       return new Response(null, {
         status: 416,
         headers: { "Content-Range": `bytes */${fileSize}` }
       });
     }
+
+    const { start, end } = byteRange;
 
     return new Response(streamFile(resolvedFilePath, start, end), {
       status: 206,
@@ -75,4 +97,3 @@ export async function GET(
     }
   });
 }
-
