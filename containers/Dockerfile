@@ -32,6 +32,8 @@ COPY . .
 RUN CURATUBE_DB_PATH=:memory: pnpm build
 
 FROM base AS runner
+LABEL org.opencontainers.image.source="https://github.com/say4n/curatube"
+
 ENV NODE_ENV=production
 ENV CURATUBE_DATA_DIR=/data
 ENV CURATUBE_CONFIG_DIR=/data/config

@@ -39,7 +39,5 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
