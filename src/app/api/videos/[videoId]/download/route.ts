@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getVideo } from "@/lib/db";
-import { refreshDownloadStatus, startVideoDownload } from "@/lib/downloads";
+import {
+  prepareVideoDownloadForStreaming,
+  refreshDownloadStatus,
+  startVideoDownload
+} from "@/lib/downloads";
 
 export const runtime = "nodejs";
 
@@ -15,7 +19,14 @@ export async function GET(
     return NextResponse.json({ error: "Video not found." }, { status: 404 });
   }
 
-  return NextResponse.json({ download: refreshDownloadStatus(videoId) });
+  const download = refreshDownloadStatus(videoId);
+
+  return NextResponse.json({
+    download:
+      download.status === "ready"
+        ? await prepareVideoDownloadForStreaming(videoId)
+        : download
+  });
 }
 
 export async function POST(
@@ -34,4 +45,3 @@ export async function POST(
     );
   }
 }
-

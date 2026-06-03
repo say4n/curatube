@@ -52,6 +52,7 @@ type Props = {
   transcript: TranscriptSegment[];
   initialNote: string;
   initialProgressSeconds: number;
+  initialDownloadStatus: DownloadStatus | null;
 };
 
 let youtubeApiPromise: Promise<void> | null = null;
@@ -102,7 +103,8 @@ export function LearningWorkspace({
   video,
   transcript,
   initialNote,
-  initialProgressSeconds
+  initialProgressSeconds,
+  initialDownloadStatus
 }: Props) {
   const [notesOpen, setNotesOpen] = useState(true);
   const [courseListOpen, setCourseListOpen] = useState(shouldOpenCourseListByDefault);
@@ -110,7 +112,7 @@ export function LearningWorkspace({
   const [transcriptBusy, setTranscriptBusy] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
   const [embedBlocked, setEmbedBlocked] = useState(false);
-  const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(null);
+  const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(initialDownloadStatus);
   const [downloadBusy, setDownloadBusy] = useState(false);
   const [pendingLocalSeek, setPendingLocalSeek] = useState<number | null>(null);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(initialProgressSeconds);
@@ -128,7 +130,8 @@ export function LearningWorkspace({
   const encodedVideoId = encodeURIComponent(video.id);
   const downloadIsActive =
     downloadStatus?.status === "queued" || downloadStatus?.status === "running";
-  const localVideoReady = embedBlocked && downloadStatus?.status === "ready";
+  const localVideoReady = downloadStatus?.status === "ready";
+  const shouldUseYouTubePlayer = !localVideoReady;
   const activeTranscriptIndex = useMemo(() => {
     if (transcriptSegments.length === 0) return -1;
 
@@ -147,9 +150,16 @@ export function LearningWorkspace({
     let cancelled = false;
     setPlayerReady(false);
     setEmbedBlocked(false);
-    setDownloadStatus(null);
+    setDownloadStatus(initialDownloadStatus);
     setPendingLocalSeek(null);
     setCurrentPlaybackTime(initialProgressSeconds);
+
+    if (!shouldUseYouTubePlayer) {
+      setPlayerReady(true);
+      return () => {
+        cancelled = true;
+      };
+    }
 
     loadYouTubeApi().then(() => {
       if (cancelled || !window.YT?.Player) return;
@@ -190,10 +200,10 @@ export function LearningWorkspace({
       }
       playerRef.current = null;
     };
-  }, [initialProgressSeconds, playerElementId, video.youtube_id]);
+  }, [initialDownloadStatus, initialProgressSeconds, playerElementId, shouldUseYouTubePlayer, video.youtube_id]);
 
   useEffect(() => {
-    if (!playerReady || embedBlocked) return;
+    if (!playerReady || embedBlocked || localVideoReady) return;
 
     const interval = window.setInterval(() => {
       const currentTime = playerRef.current?.getCurrentTime?.();
@@ -204,10 +214,10 @@ export function LearningWorkspace({
     }, 5000);
 
     return () => window.clearInterval(interval);
-  }, [embedBlocked, playerReady, video.id]);
+  }, [embedBlocked, localVideoReady, playerReady, video.id]);
 
   useEffect(() => {
-    if (!playerReady || embedBlocked) return;
+    if (!playerReady || embedBlocked || localVideoReady) return;
 
     const interval = window.setInterval(() => {
       const currentTime = playerRef.current?.getCurrentTime?.();
@@ -217,7 +227,7 @@ export function LearningWorkspace({
     }, 750);
 
     return () => window.clearInterval(interval);
-  }, [embedBlocked, playerReady, video.id]);
+  }, [embedBlocked, localVideoReady, playerReady, video.id]);
 
   useEffect(() => {
     if (activeTranscriptIndex < 0) return;
@@ -295,6 +305,7 @@ export function LearningWorkspace({
     element.pause();
     element.addEventListener("seeked", playAfterSeek, { once: true });
     element.currentTime = seconds;
+    void element.play().catch(() => {});
     window.setTimeout(() => {
       element.removeEventListener("seeked", playAfterSeek);
       if (Math.abs(element.currentTime - seconds) < 0.75) {
@@ -479,10 +490,13 @@ export function LearningWorkspace({
               ) : null}
               <div id="player-region" className="relative overflow-hidden rounded-md bg-black shadow-lg">
                 <div className="relative aspect-video">
-                  <div
-                    id={playerElementId}
-                    className={`h-full w-full ${embedBlocked ? "opacity-0" : ""}`}
-                  />
+                  {shouldUseYouTubePlayer ? (
+                    <div
+                      id={playerElementId}
+                      aria-hidden={embedBlocked}
+                      className={`h-full w-full ${embedBlocked ? "invisible pointer-events-none" : ""}`}
+                    />
+                  ) : null}
                   {localVideoReady ? (
                     <video
                       ref={localVideoRef}
@@ -542,10 +556,10 @@ export function LearningWorkspace({
                       <Loader2 size={16} className="animate-spin text-moss" />
                     )}
                     <span>
-                      {embedBlocked
-                        ? localVideoReady
-                          ? "Local download"
-                          : downloadIsActive
+                      {localVideoReady
+                        ? "Local download"
+                        : embedBlocked
+                          ? downloadIsActive
                             ? "Downloading"
                             : "Embed blocked"
                         : playerReady
@@ -553,7 +567,7 @@ export function LearningWorkspace({
                           : "Loading player"}
                     </span>
                   </div>
-                  {embedBlocked ? (
+                  {embedBlocked || localVideoReady ? (
                     <div className="mt-0.5 text-xs leading-5 text-[#81776a]">
                       {downloadStatus?.status === "ready" &&
                       formatBytes(downloadStatus.file_size_bytes) ? (
@@ -570,7 +584,7 @@ export function LearningWorkspace({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-                  {embedBlocked ? (
+                  {embedBlocked || localVideoReady ? (
                     <>
                       {downloadStatus?.status === "failed" ||
                       downloadStatus?.status === "missing" ||

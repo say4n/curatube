@@ -6,10 +6,12 @@ import {
   getNote,
   getPlaylist,
   getPlaylistVideos,
+  getVideoDownload,
   getVideoProgress,
   getTranscript,
   getVideo
 } from "@/lib/db";
+import { prepareVideoDownloadForStreaming } from "@/lib/downloads";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,17 @@ export default async function VideoPage({
   const transcript = getTranscript(video.id);
   const note = getNote(video.id);
   const progress = getVideoProgress(video.id);
+  const download = getVideoDownload(video.id);
+  const refreshedDownload =
+    download?.status === "ready" ? await prepareVideoDownloadForStreaming(video.id) : download;
+  const initialDownloadStatus = refreshedDownload
+    ? {
+        video_id: refreshedDownload.video_id,
+        status: refreshedDownload.status,
+        file_size_bytes: refreshedDownload.file_size_bytes,
+        error: refreshedDownload.error
+      }
+    : null;
 
   return (
     <main className="min-h-screen bg-[#f7f4ef]">
@@ -60,6 +73,7 @@ export default async function VideoPage({
         transcript={transcript}
         initialNote={note}
         initialProgressSeconds={progress?.position_seconds ?? 0}
+        initialDownloadStatus={initialDownloadStatus}
       />
     </main>
   );

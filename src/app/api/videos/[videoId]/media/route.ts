@@ -10,6 +10,20 @@ function streamFile(filePath: string, start: number, end: number) {
   return Readable.toWeb(fs.createReadStream(filePath, { start, end })) as ReadableStream;
 }
 
+function mediaHeaders(filePath: string, fileSize: number, contentType: string) {
+  const stats = fs.statSync(filePath);
+  const lastModified = stats.mtime.toUTCString();
+  const etag = `"${fileSize.toString(16)}-${Math.floor(stats.mtimeMs).toString(16)}"`;
+
+  return {
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "private, no-transform",
+    "Content-Type": contentType,
+    "ETag": etag,
+    "Last-Modified": lastModified
+  };
+}
+
 function parseRange(range: string, fileSize: number) {
   const match = range.match(/^bytes=(\d*)-(\d*)$/);
   if (!match) return null;
@@ -40,6 +54,21 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ videoId: string }> }
 ) {
+  return serveMedia(request, params, false);
+}
+
+export async function HEAD(
+  request: Request,
+  { params }: { params: Promise<{ videoId: string }> }
+) {
+  return serveMedia(request, params, true);
+}
+
+async function serveMedia(
+  request: Request,
+  params: Promise<{ videoId: string }>,
+  headOnly: boolean
+) {
   const { videoId: rawVideoId } = await params;
   const videoId = decodeURIComponent(rawVideoId);
   const video = getVideo(videoId);
@@ -65,6 +94,7 @@ export async function GET(
   const fileSize = stats.size;
   const contentType = download.mime_type ?? "video/mp4";
   const range = request.headers.get("range");
+  const headers = mediaHeaders(resolvedFilePath, fileSize, contentType);
 
   if (range) {
     const byteRange = parseRange(range, fileSize);
@@ -78,22 +108,20 @@ export async function GET(
 
     const { start, end } = byteRange;
 
-    return new Response(streamFile(resolvedFilePath, start, end), {
+    return new Response(headOnly ? null : streamFile(resolvedFilePath, start, end), {
       status: 206,
       headers: {
-        "Accept-Ranges": "bytes",
+        ...headers,
         "Content-Length": String(end - start + 1),
-        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-        "Content-Type": contentType
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`
       }
     });
   }
 
-  return new Response(streamFile(resolvedFilePath, 0, fileSize - 1), {
+  return new Response(headOnly ? null : streamFile(resolvedFilePath, 0, fileSize - 1), {
     headers: {
-      "Accept-Ranges": "bytes",
-      "Content-Length": String(fileSize),
-      "Content-Type": contentType
+      ...headers,
+      "Content-Length": String(fileSize)
     }
   });
 }
