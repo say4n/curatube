@@ -25,6 +25,10 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid note body." }, { status: 400 });
   }
 
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return NextResponse.json({ ok: true, demoMode: true });
+  }
+
   db.prepare(
     `INSERT INTO notes (video_id, body, updated_at)
      VALUES (?, ?, CURRENT_TIMESTAMP)

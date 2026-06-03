@@ -84,6 +84,20 @@ function setJob(
 }
 
 export function createImportJob(sourceUrl: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return {
+      id: makeJobId(),
+      source_url: sourceUrl,
+      status: "failed",
+      progress: 0,
+      message: "Importing is disabled in demo mode",
+      playlist_id: null,
+      error: "Demo mode active",
+      created_at: now(),
+      updated_at: now(),
+    } as any;
+  }
+
   const id = makeJobId();
 
   db.prepare(

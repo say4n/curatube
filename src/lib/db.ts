@@ -1,6 +1,7 @@
+import fs from "fs";
+import path from "path";
 import Database from "better-sqlite3";
-import { dbPath, ensureRuntimeDirectories } from "./paths";
-
+import { dataDir, dbPath, ensureRuntimeDirectories } from "./paths";
 ensureRuntimeDirectories();
 
 const globalForDb = globalThis as unknown as {
@@ -162,7 +163,32 @@ export type VideoProgress = {
   updated_at: string;
 };
 
+let demoDataCache: any = null;
+function getDemoData() {
+  if (demoDataCache) return demoDataCache;
+  try {
+    const demoPath = path.join(dataDir, "demo.json.gz");
+    const compressed = fs.readFileSync(demoPath);
+    const jsonString = require("zlib").gunzipSync(compressed).toString("utf-8");
+    demoDataCache = JSON.parse(jsonString);
+  } catch (e) {
+    console.error("Failed to load demo.json.gz", e);
+    demoDataCache = {
+      playlists: [],
+      videos: [],
+      transcript_segments: [],
+      notes: [],
+      video_downloads: [],
+      video_progress: [],
+    };
+  }
+  return demoDataCache;
+}
+
 export function getPlaylists() {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return (getDemoData().playlists || []) as Playlist[];
+  }
   return db
     .prepare(
       `SELECT
@@ -180,6 +206,7 @@ export function getPlaylists() {
 }
 
 export function getRecentJobs() {
+  if (process.env.DEMO_MODE_ENABLED === "true") return [] as ImportJob[];
   return db
     .prepare(
       `SELECT * FROM import_jobs
@@ -191,12 +218,16 @@ export function getRecentJobs() {
 }
 
 export function getImportJob(id: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") return undefined;
   return db.prepare(`SELECT * FROM import_jobs WHERE id = ?`).get(id) as
     | ImportJob
     | undefined;
 }
 
 export function getPlaylist(id: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return (getDemoData().playlists || []).find((p: any) => p.id === id) as Playlist | undefined;
+  }
   return db
     .prepare(
       `SELECT
@@ -214,6 +245,9 @@ export function getPlaylist(id: string) {
 }
 
 export function getPlaylistVideos(playlistId: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return (getDemoData().videos || []).filter((v: any) => v.playlist_id === playlistId) as Video[];
+  }
   return db
     .prepare(
       `SELECT * FROM videos WHERE playlist_id = ? ORDER BY position ASC`
@@ -222,12 +256,18 @@ export function getPlaylistVideos(playlistId: string) {
 }
 
 export function getVideo(videoId: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return (getDemoData().videos || []).find((v: any) => v.id === videoId) as Video | undefined;
+  }
   return db.prepare(`SELECT * FROM videos WHERE id = ?`).get(videoId) as
     | Video
     | undefined;
 }
 
 export function getTranscript(videoId: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return (getDemoData().transcript_segments || []).filter((ts: any) => ts.video_id === videoId) as TranscriptSegment[];
+  }
   return db
     .prepare(
       `SELECT * FROM transcript_segments
@@ -238,6 +278,10 @@ export function getTranscript(videoId: string) {
 }
 
 export function getNote(videoId: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    const note = (getDemoData().notes || []).find((n: any) => n.video_id === videoId);
+    return note?.body ?? "";
+  }
   const row = db
     .prepare(`SELECT body FROM notes WHERE video_id = ?`)
     .get(videoId) as { body: string } | undefined;
@@ -246,12 +290,18 @@ export function getNote(videoId: string) {
 }
 
 export function getVideoDownload(videoId: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return (getDemoData().video_downloads || []).find((d: any) => d.video_id === videoId) as VideoDownload | undefined;
+  }
   return db
     .prepare(`SELECT * FROM video_downloads WHERE video_id = ?`)
     .get(videoId) as VideoDownload | undefined;
 }
 
 export function getVideoProgress(videoId: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return (getDemoData().video_progress || []).find((p: any) => p.video_id === videoId) as VideoProgress | undefined;
+  }
   return db
     .prepare(`SELECT * FROM video_progress WHERE video_id = ?`)
     .get(videoId) as VideoProgress | undefined;

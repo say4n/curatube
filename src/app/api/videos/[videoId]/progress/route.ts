@@ -45,6 +45,18 @@ export async function PUT(
     parsed.data.completed ??
     (duration !== null && duration > 0 && parsed.data.position_seconds / duration >= 0.92);
 
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return NextResponse.json({
+      progress: {
+        video_id: videoId,
+        position_seconds: parsed.data.position_seconds,
+        duration_seconds: duration,
+        completed: completed ? 1 : 0,
+        updated_at: new Date().toISOString(),
+      }
+    });
+  }
+
   db.prepare(
     `INSERT INTO video_progress
       (video_id, position_seconds, duration_seconds, completed, updated_at)
