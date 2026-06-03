@@ -19,6 +19,15 @@ Run checks inside the same environment:
 docker compose -f containers/docker-compose.yml exec curatube pnpm typecheck
 ```
 
+## Self-hosting
+
+Use the published GHCR image with the example compose file:
+
+```sh
+docker compose -f containers/docker-compose.example.yml pull
+docker compose -f containers/docker-compose.example.yml up -d
+```
+
 ## Storage configuration
 
 Curatube defaults to local `./data` storage, but all runtime paths can be set with environment variables:

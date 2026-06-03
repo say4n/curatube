@@ -1,0 +1,43 @@
+# Example self-hosted Curatube deployment.
+#
+# Usage:
+#   docker compose -f containers/docker-compose.example.yml pull
+#   docker compose -f containers/docker-compose.example.yml up -d
+
+services:
+  curatube:
+    image: ghcr.io/say4n/curatube:latest
+    container_name: curatube
+    restart: unless-stopped
+    ports:
+      # Host port:container port. Change the left side if 3000 is already used.
+      - "3000:3000"
+    environment:
+      # Optional. The image defaults to production mode.
+      NODE_ENV: production
+
+      # Optional. Disable Next.js telemetry.
+      NEXT_TELEMETRY_DISABLED: "1"
+
+      # Base directory for Curatube runtime data inside the container.
+      CURATUBE_DATA_DIR: /data
+
+      # Directory for app config files. Defaults to $CURATUBE_DATA_DIR/config.
+      CURATUBE_CONFIG_DIR: /data/config
+
+      # Directory where yt-dlp downloads are stored.
+      # Downloaded videos are organized by playlist and video id under this path.
+      # Defaults to $CURATUBE_DATA_DIR/media.
+      CURATUBE_MEDIA_DIR: /data/media
+
+      # SQLite database path. Defaults to $CURATUBE_DATA_DIR/curatube.sqlite.
+      CURATUBE_DB_PATH: /data/curatube.sqlite
+    volumes:
+      # Persistent Docker volume for SQLite, config, and downloaded media.
+      - curatube-data:/data
+
+      # Alternative: use a host directory instead of a Docker volume.
+      # - ./curatube-data:/data
+
+volumes:
+  curatube-data:
