@@ -118,6 +118,7 @@ export function LearningWorkspace({
     playVideo?: () => void;
     seekTo: (seconds: number, allowSeekAhead: boolean) => void;
   } | null>(null);
+  const youtubeHostRef = useRef<HTMLDivElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const transcriptListRef = useRef<HTMLDivElement | null>(null);
   const transcriptItemRefs = useRef(new Map<number, HTMLButtonElement>());
@@ -169,6 +170,15 @@ export function LearningWorkspace({
 
     loadYouTubeApi().then(() => {
       if (cancelled || !window.YT?.Player) return;
+      const host = youtubeHostRef.current;
+      if (!host) return;
+
+      host.replaceChildren();
+      const playerElement = document.createElement("div");
+      playerElement.id = playerElementId;
+      playerElement.className = "h-full w-full";
+      host.appendChild(playerElement);
+
       playerRef.current = new window.YT.Player(playerElementId, {
         videoId: video.youtube_id,
         playerVars: {
@@ -204,6 +214,7 @@ export function LearningWorkspace({
       } catch {
         // The YouTube iframe API owns this DOM node after initialization.
       }
+      youtubeHostRef.current?.replaceChildren();
       playerRef.current = null;
     };
   }, [initialProgressSeconds, playerElementId, shouldUseYouTubePlayer, video.youtube_id]);
@@ -498,7 +509,7 @@ export function LearningWorkspace({
                 <div className="relative aspect-video">
                   {shouldUseYouTubePlayer ? (
                     <div
-                      id={playerElementId}
+                      ref={youtubeHostRef}
                       aria-hidden={embedBlocked}
                       className={`h-full w-full ${embedBlocked ? "invisible pointer-events-none" : ""}`}
                     />

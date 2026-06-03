@@ -40,3 +40,10 @@ docker build -f containers/Dockerfile -t curatube:latest .
 
 - Downloaded videos and local SQLite data are runtime artifacts and should not be committed.
 - Keep UI changes focused on the distraction-free learning workflow.
+- Local video playback must stay Safari-compatible: keep one prepared MP4 per video
+  using H.264/AAC when possible, serve it through the media API with byte-range
+  support, and avoid adding parallel browser-specific copies unless there is a
+  verified need.
+- The YouTube iframe API mutates its host DOM. Keep React ownership separated
+  from the API-owned player node when switching between embedded and local
+  playback.
