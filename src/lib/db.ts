@@ -10,93 +10,103 @@ const globalForDb = globalThis as unknown as {
 
 export const db =
   globalForDb.curatubeDb ??
-  new Database(dbPath, {
-    fileMustExist: false
-  });
+  (process.env.DEMO_MODE_ENABLED === "true"
+    ? ({
+        prepare: () => ({ get: () => undefined, all: () => [], run: () => {} }),
+        exec: () => {},
+        pragma: () => {},
+        transaction: (fn: any) => fn
+      } as unknown as Database.Database)
+    : new Database(dbPath, {
+        fileMustExist: false
+      }));
 
 if (process.env.NODE_ENV !== "production") {
   globalForDb.curatubeDb = db;
 }
 
-db.pragma("journal_mode = WAL");
-db.pragma("busy_timeout = 5000");
-db.pragma("foreign_keys = ON");
+if (process.env.DEMO_MODE_ENABLED !== "true") {
+  db.pragma("journal_mode = WAL");
+  db.pragma("busy_timeout = 5000");
+  db.pragma("foreign_keys = ON");
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS playlists (
-    id TEXT PRIMARY KEY,
-    source_url TEXT NOT NULL UNIQUE,
-    title TEXT NOT NULL,
-    channel TEXT,
-    thumbnail_url TEXT,
-    video_count INTEGER NOT NULL DEFAULT 0,
-    import_status TEXT NOT NULL DEFAULT 'ready',
-    import_error TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
 
-  CREATE TABLE IF NOT EXISTS videos (
-    id TEXT PRIMARY KEY,
-    playlist_id TEXT NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
-    youtube_id TEXT NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    thumbnail_url TEXT,
-    duration_seconds INTEGER,
-    position INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(playlist_id, youtube_id)
-  );
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS playlists (
+      id TEXT PRIMARY KEY,
+      source_url TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      channel TEXT,
+      thumbnail_url TEXT,
+      video_count INTEGER NOT NULL DEFAULT 0,
+      import_status TEXT NOT NULL DEFAULT 'ready',
+      import_error TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
 
-  CREATE TABLE IF NOT EXISTS transcript_segments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-    start_seconds REAL NOT NULL,
-    duration_seconds REAL,
-    text TEXT NOT NULL,
-    position INTEGER NOT NULL,
-    UNIQUE(video_id, position)
-  );
+    CREATE TABLE IF NOT EXISTS videos (
+      id TEXT PRIMARY KEY,
+      playlist_id TEXT NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+      youtube_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      thumbnail_url TEXT,
+      duration_seconds INTEGER,
+      position INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(playlist_id, youtube_id)
+    );
 
-  CREATE TABLE IF NOT EXISTS notes (
-    video_id TEXT PRIMARY KEY REFERENCES videos(id) ON DELETE CASCADE,
-    body TEXT NOT NULL DEFAULT '',
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
+    CREATE TABLE IF NOT EXISTS transcript_segments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+      start_seconds REAL NOT NULL,
+      duration_seconds REAL,
+      text TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      UNIQUE(video_id, position)
+    );
 
-  CREATE TABLE IF NOT EXISTS import_jobs (
-    id TEXT PRIMARY KEY,
-    source_url TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'queued',
-    progress INTEGER NOT NULL DEFAULT 0,
-    message TEXT,
-    playlist_id TEXT REFERENCES playlists(id) ON DELETE SET NULL,
-    error TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
+    CREATE TABLE IF NOT EXISTS notes (
+      video_id TEXT PRIMARY KEY REFERENCES videos(id) ON DELETE CASCADE,
+      body TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
 
-  CREATE TABLE IF NOT EXISTS video_downloads (
-    video_id TEXT PRIMARY KEY REFERENCES videos(id) ON DELETE CASCADE,
-    status TEXT NOT NULL DEFAULT 'missing',
-    file_path TEXT,
-    file_size_bytes INTEGER,
-    mime_type TEXT,
-    error TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
+    CREATE TABLE IF NOT EXISTS import_jobs (
+      id TEXT PRIMARY KEY,
+      source_url TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      progress INTEGER NOT NULL DEFAULT 0,
+      message TEXT,
+      playlist_id TEXT REFERENCES playlists(id) ON DELETE SET NULL,
+      error TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
 
-  CREATE TABLE IF NOT EXISTS video_progress (
-    video_id TEXT PRIMARY KEY REFERENCES videos(id) ON DELETE CASCADE,
-    position_seconds REAL NOT NULL DEFAULT 0,
-    duration_seconds REAL,
-    completed INTEGER NOT NULL DEFAULT 0,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+    CREATE TABLE IF NOT EXISTS video_downloads (
+      video_id TEXT PRIMARY KEY REFERENCES videos(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'missing',
+      file_path TEXT,
+      file_size_bytes INTEGER,
+      mime_type TEXT,
+      error TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS video_progress (
+      video_id TEXT PRIMARY KEY REFERENCES videos(id) ON DELETE CASCADE,
+      position_seconds REAL NOT NULL DEFAULT 0,
+      duration_seconds REAL,
+      completed INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
 
 export type Playlist = {
   id: string;

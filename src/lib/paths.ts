@@ -17,6 +17,8 @@ export const dbPath =
     : resolvePath(process.env.CURATUBE_DB_PATH ?? path.join(dataDir, "curatube.sqlite"));
 
 export function ensureRuntimeDirectories() {
+  if (process.env.DEMO_MODE_ENABLED === "true") return;
+
   fs.mkdirSync(dataDir, { recursive: true });
   fs.mkdirSync(configDir, { recursive: true });
   fs.mkdirSync(mediaDir, { recursive: true });
