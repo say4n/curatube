@@ -59,8 +59,8 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
   const renderedBody = useMemo(() => linkifyTimestamps(body), [body]);
 
   return (
-    <aside className="border-t border-[#d8d1c3] bg-[#fffdf8] xl:min-h-[520px] xl:border-l xl:border-t-0">
-      <div className="flex h-full min-h-[320px] flex-col sm:min-h-[380px] xl:min-h-[420px]">
+    <aside className="h-full border-t border-[#d8d1c3] bg-[#fffdf8] xl:border-l xl:border-t-0">
+      <div className="flex h-full min-h-[320px] flex-col sm:min-h-[380px]">
         <div className="flex items-center justify-between gap-3 border-b border-[#d8d1c3] px-4 py-3">
           <h2 className="text-base font-black text-ink">Notes</h2>
           <div className="flex items-center gap-2">

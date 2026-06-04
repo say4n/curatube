@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import {
   Check,
   CheckCircle2,
@@ -61,6 +62,9 @@ type Props = {
 };
 
 let youtubeApiPromise: Promise<void> | null = null;
+const notesWidthStorageKey = "curatube:notes-width";
+const minNotesWidth = 320;
+const maxNotesWidth = 680;
 
 type DownloadStatus = {
   video_id: string;
@@ -114,6 +118,10 @@ function joinMetadata(parts: Array<string | null>) {
   return parts.filter(Boolean).join(" · ");
 }
 
+function clampNotesWidth(width: number) {
+  return Math.min(maxNotesWidth, Math.max(minNotesWidth, width));
+}
+
 export function LearningWorkspace({
   playlist,
   videos,
@@ -127,6 +135,7 @@ export function LearningWorkspace({
   initialDownloadStatus
 }: Props) {
   const [notesOpen, setNotesOpen] = useState(true);
+  const [notesWidth, setNotesWidth] = useState(420);
   const [courseListOpen, setCourseListOpen] = useState(false);
   const [transcriptSegments, setTranscriptSegments] = useState(transcript);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
@@ -241,6 +250,13 @@ export function LearningWorkspace({
 
   useEffect(() => {
     setCourseListOpen(window.matchMedia("(min-width: 1024px)").matches);
+  }, []);
+
+  useEffect(() => {
+    const savedWidth = Number(window.localStorage.getItem(notesWidthStorageKey));
+    if (Number.isFinite(savedWidth)) {
+      setNotesWidth(clampNotesWidth(savedWidth));
+    }
   }, []);
 
   useEffect(() => {
@@ -613,6 +629,39 @@ export function LearningWorkspace({
     }
   }
 
+  function startNotesResize(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!window.matchMedia("(min-width: 1280px)").matches) return;
+
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = notesWidth;
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    function handlePointerMove(pointerEvent: PointerEvent) {
+      const nextWidth = clampNotesWidth(startWidth + startX - pointerEvent.clientX);
+      setNotesWidth(nextWidth);
+    }
+
+    function stopResize(pointerEvent: PointerEvent) {
+      const nextWidth = clampNotesWidth(startWidth + startX - pointerEvent.clientX);
+      setNotesWidth(nextWidth);
+      window.localStorage.setItem(notesWidthStorageKey, String(nextWidth));
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", stopResize);
+      window.removeEventListener("pointercancel", stopResize);
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", stopResize);
+    window.addEventListener("pointercancel", stopResize);
+  }
+
   return (
     <div
       className={`grid w-full gap-0 ${
@@ -710,11 +759,16 @@ export function LearningWorkspace({
       </aside>
 
       <section className="min-w-0">
-        <div className="grid min-h-[calc(100vh-65px)] grid-rows-[auto_1fr]">
+        <div className="flex min-h-[calc(100vh-65px)] flex-col">
           <div
-            className={`grid min-w-0 gap-0 ${
-              notesOpen ? "xl:grid-cols-[minmax(0,1fr)_420px]" : ""
+            className={`grid min-h-0 min-w-0 flex-1 gap-0 ${
+              notesOpen ? "xl:grid-cols-[minmax(0,1fr)_var(--notes-width)]" : ""
             }`}
+            style={
+              notesOpen
+                ? ({ "--notes-width": `${notesWidth}px` } as CSSProperties)
+                : undefined
+            }
           >
             <div className="min-w-0 p-3 sm:p-4 md:p-6">
               {!courseListOpen ? (
@@ -968,11 +1022,22 @@ export function LearningWorkspace({
             </div>
 
             {notesOpen ? (
-              <NoteEditor videoId={video.id} initialNote={initialNote} onSeek={seekTo} />
+              <div className="relative h-full min-h-0 min-w-0 self-stretch overflow-hidden">
+                <button
+                  type="button"
+                  onPointerDown={startNotesResize}
+                  aria-label="Resize notes pane"
+                  title="Resize notes pane"
+                  className="absolute left-0 top-0 z-10 hidden h-full w-3 -translate-x-1/2 cursor-col-resize items-center justify-center outline-none xl:flex"
+                >
+                  <span className="h-12 w-1 rounded-full bg-[#c9c0b2] opacity-0 transition hover:opacity-100" />
+                </button>
+                <NoteEditor videoId={video.id} initialNote={initialNote} onSeek={seekTo} />
+              </div>
             ) : null}
           </div>
 
-          <div className="border-t border-[#d8d1c3] bg-[#fffdf8]">
+          <div className="shrink-0 border-t border-[#d8d1c3] bg-[#fffdf8]">
             <div className="px-4 py-4 md:px-6">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="text-lg font-black text-ink">Transcript</h2>
