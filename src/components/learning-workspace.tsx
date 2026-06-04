@@ -129,6 +129,7 @@ export function LearningWorkspace({
   const [transcriptSegments, setTranscriptSegments] = useState(transcript);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
+  const [youtubePlayerVisible, setYoutubePlayerVisible] = useState(false);
   const [embedBlocked, setEmbedBlocked] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(initialDownloadStatus);
   const [downloadBusy, setDownloadBusy] = useState(false);
@@ -225,6 +226,7 @@ export function LearningWorkspace({
 
   useEffect(() => {
     setPlayerReady(false);
+    setYoutubePlayerVisible(false);
     setEmbedBlocked(false);
     setDownloadStatus(initialDownloadStatus);
     setPreferLocalPlayback(initialPreferLocalPlayback);
@@ -241,11 +243,14 @@ export function LearningWorkspace({
 
   useEffect(() => {
     let cancelled = false;
+    let revealTimer: number | null = null;
     setPlayerReady(false);
+    setYoutubePlayerVisible(false);
     setEmbedBlocked(false);
 
     if (!shouldUseYouTubePlayer) {
       setPlayerReady(true);
+      setYoutubePlayerVisible(false);
       return () => {
         cancelled = true;
       };
@@ -272,17 +277,19 @@ export function LearningWorkspace({
         },
         events: {
           onReady: () => {
-            setPlayerReady(true);
+            revealTimer = window.setTimeout(() => {
+              if (cancelled || !playerRef.current) return;
+              setPlayerReady(true);
+              setYoutubePlayerVisible(true);
+            }, 400);
           },
           onError: (event) => {
             if (event.data === 101 || event.data === 150) {
-              try {
-                playerRef.current?.destroy?.();
-              } catch {
-                // The YouTube iframe API owns this DOM node after initialization.
+              if (revealTimer !== null) {
+                window.clearTimeout(revealTimer);
+                revealTimer = null;
               }
-              youtubeHostRef.current?.replaceChildren();
-              playerRef.current = null;
+              setYoutubePlayerVisible(false);
               setEmbedBlocked(true);
             }
           },
@@ -298,6 +305,10 @@ export function LearningWorkspace({
 
     return () => {
       cancelled = true;
+      if (revealTimer !== null) {
+        window.clearTimeout(revealTimer);
+      }
+      setYoutubePlayerVisible(false);
       try {
         playerRef.current?.destroy?.();
       } catch {
@@ -703,10 +714,14 @@ export function LearningWorkspace({
               ) : null}
               <div id="player-region" className="relative overflow-hidden rounded-md bg-black shadow-lg">
                 <div className="relative aspect-video">
-                  {shouldUseYouTubePlayer && !embedBlocked ? (
+                  {shouldUseYouTubePlayer ? (
                     <div
                       ref={youtubeHostRef}
-                      className="h-full w-full"
+                      className={`h-full w-full ${
+                        youtubePlayerVisible && !embedBlocked
+                          ? ""
+                          : "invisible pointer-events-none"
+                      }`}
                     />
                   ) : null}
                   {localVideoActive ? (
