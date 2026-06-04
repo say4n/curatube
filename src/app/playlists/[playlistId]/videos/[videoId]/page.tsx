@@ -93,7 +93,7 @@ export default async function VideoPage({
         initialNote={note}
         initialProgressSeconds={progress?.position_seconds ?? 0}
         initialVideoProgress={videoProgress}
-        initialPreferLocalPlayback={preference?.prefer_local_playback ?? false}
+        initialPreferLocalPlayback={preference?.prefer_local_playback ?? null}
         initialDownloadStatus={initialDownloadStatus}
       />
     </main>

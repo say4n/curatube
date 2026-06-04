@@ -55,7 +55,7 @@ type Props = {
   initialNote: string;
   initialProgressSeconds: number;
   initialVideoProgress: VideoProgress[];
-  initialPreferLocalPlayback: boolean;
+  initialPreferLocalPlayback: boolean | null;
   initialDownloadStatus: DownloadStatus | null;
 };
 
@@ -132,7 +132,9 @@ export function LearningWorkspace({
   const [embedBlocked, setEmbedBlocked] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(initialDownloadStatus);
   const [downloadBusy, setDownloadBusy] = useState(false);
-  const [preferLocalPlayback, setPreferLocalPlayback] = useState(initialPreferLocalPlayback);
+  const [preferLocalPlayback, setPreferLocalPlayback] = useState<boolean | null>(
+    initialPreferLocalPlayback
+  );
   const [pendingLocalSeek, setPendingLocalSeek] = useState<number | null>(null);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(initialProgressSeconds);
   const [videoCompletion, setVideoCompletion] = useState<Record<string, boolean>>(() =>
@@ -157,8 +159,9 @@ export function LearningWorkspace({
   const downloadIsActive =
     downloadStatus?.status === "queued" || downloadStatus?.status === "running";
   const localVideoReady = downloadStatus?.status === "ready";
-  const localVideoActive = localVideoReady && (preferLocalPlayback || embedBlocked);
+  const localVideoActive = localVideoReady && (embedBlocked || preferLocalPlayback !== false);
   const shouldUseYouTubePlayer = !localVideoActive;
+  const canSwitchPlayer = localVideoReady && !embedBlocked;
   const downloadProgressPercent =
     typeof downloadStatus?.progress_percent === "number" &&
     Number.isFinite(downloadStatus.progress_percent)
@@ -274,6 +277,13 @@ export function LearningWorkspace({
           },
           onError: (event) => {
             if (event.data === 101 || event.data === 150) {
+              try {
+                playerRef.current?.destroy?.();
+              } catch {
+                // The YouTube iframe API owns this DOM node after initialization.
+              }
+              youtubeHostRef.current?.replaceChildren();
+              playerRef.current = null;
               setEmbedBlocked(true);
             }
           },
@@ -515,7 +525,7 @@ export function LearningWorkspace({
   async function togglePreferredPlayer() {
     if (!localVideoReady) return;
 
-    const nextPreferLocal = !preferLocalPlayback;
+    const nextPreferLocal = !localVideoActive;
     setPreferLocalPlayback(nextPreferLocal);
 
     const response = await fetch(`/api/videos/${encodedVideoId}/preferences`, {
@@ -694,11 +704,10 @@ export function LearningWorkspace({
               ) : null}
               <div id="player-region" className="relative overflow-hidden rounded-md bg-black shadow-lg">
                 <div className="relative aspect-video">
-                  {shouldUseYouTubePlayer ? (
+                  {shouldUseYouTubePlayer && !embedBlocked ? (
                     <div
                       ref={youtubeHostRef}
-                      aria-hidden={embedBlocked}
-                      className={`h-full w-full ${embedBlocked ? "invisible pointer-events-none" : ""}`}
+                      className="h-full w-full"
                     />
                   ) : null}
                   {localVideoActive ? (
@@ -866,14 +875,14 @@ export function LearningWorkspace({
                       Download
                     </button>
                   ) : null}
-                  {localVideoReady && !embedBlocked ? (
+                  {canSwitchPlayer ? (
                     <button
                       type="button"
                       onClick={togglePreferredPlayer}
                       className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-xs font-bold text-ink transition hover:bg-cloud"
                     >
-                      {preferLocalPlayback ? <ExternalLink size={15} /> : <Download size={15} />}
-                      {preferLocalPlayback ? "Use YouTube" : "Use local"}
+                      {localVideoActive ? <ExternalLink size={15} /> : <Download size={15} />}
+                      {localVideoActive ? "Use YouTube" : "Use local"}
                     </button>
                   ) : null}
                   <button
