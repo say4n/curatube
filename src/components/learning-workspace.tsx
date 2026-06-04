@@ -56,6 +56,7 @@ type Props = {
   initialProgressSeconds: number;
   initialVideoProgress: VideoProgress[];
   initialPreferLocalPlayback: boolean | null;
+  initialYoutubeEmbedBlocked: boolean;
   initialDownloadStatus: DownloadStatus | null;
 };
 
@@ -122,6 +123,7 @@ export function LearningWorkspace({
   initialProgressSeconds,
   initialVideoProgress,
   initialPreferLocalPlayback,
+  initialYoutubeEmbedBlocked,
   initialDownloadStatus
 }: Props) {
   const [notesOpen, setNotesOpen] = useState(true);
@@ -130,7 +132,7 @@ export function LearningWorkspace({
   const [transcriptBusy, setTranscriptBusy] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
   const [youtubePlayerVisible, setYoutubePlayerVisible] = useState(false);
-  const [embedBlocked, setEmbedBlocked] = useState(false);
+  const [embedBlocked, setEmbedBlocked] = useState(initialYoutubeEmbedBlocked);
   const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(initialDownloadStatus);
   const [downloadBusy, setDownloadBusy] = useState(false);
   const [preferLocalPlayback, setPreferLocalPlayback] = useState<boolean | null>(
@@ -227,7 +229,7 @@ export function LearningWorkspace({
   useEffect(() => {
     setPlayerReady(false);
     setYoutubePlayerVisible(false);
-    setEmbedBlocked(false);
+    setEmbedBlocked(initialYoutubeEmbedBlocked);
     setDownloadStatus(initialDownloadStatus);
     setPreferLocalPlayback(initialPreferLocalPlayback);
     setPendingLocalSeek(null);
@@ -235,7 +237,7 @@ export function LearningWorkspace({
     isUnloadingRef.current = false;
     // Server-provided playback state seeds the client only when navigating to a new video.
     // Local delete/download actions should not be overwritten by player mode changes.
-  }, [video.id]);
+  }, [initialYoutubeEmbedBlocked, video.id]);
 
   useEffect(() => {
     setCourseListOpen(window.matchMedia("(min-width: 1024px)").matches);
@@ -246,9 +248,9 @@ export function LearningWorkspace({
     let revealTimer: number | null = null;
     setPlayerReady(false);
     setYoutubePlayerVisible(false);
-    setEmbedBlocked(false);
+    setEmbedBlocked(initialYoutubeEmbedBlocked);
 
-    if (!shouldUseYouTubePlayer) {
+    if (!shouldUseYouTubePlayer || initialYoutubeEmbedBlocked) {
       setPlayerReady(true);
       setYoutubePlayerVisible(false);
       return () => {
@@ -291,6 +293,7 @@ export function LearningWorkspace({
               }
               setYoutubePlayerVisible(false);
               setEmbedBlocked(true);
+              void saveYoutubeEmbedBlocked();
             }
           },
           onStateChange: (event) => {
@@ -317,7 +320,13 @@ export function LearningWorkspace({
       youtubeHostRef.current?.replaceChildren();
       playerRef.current = null;
     };
-  }, [initialProgressSeconds, playerElementId, shouldUseYouTubePlayer, video.youtube_id]);
+  }, [
+    initialProgressSeconds,
+    initialYoutubeEmbedBlocked,
+    playerElementId,
+    shouldUseYouTubePlayer,
+    video.youtube_id
+  ]);
 
   useEffect(() => {
     if (!playerReady || embedBlocked || localVideoActive) return;
@@ -530,6 +539,14 @@ export function LearningWorkspace({
     } finally {
       setDownloadBusy(false);
     }
+  }
+
+  async function saveYoutubeEmbedBlocked() {
+    await fetch(`/api/videos/${encodedVideoId}/preferences`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ youtube_embed_blocked_at: new Date().toISOString() })
+    });
   }
 
   async function togglePreferredPlayer() {

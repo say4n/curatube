@@ -115,6 +115,7 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
     CREATE TABLE IF NOT EXISTS video_preferences (
       video_id TEXT PRIMARY KEY REFERENCES videos(id) ON DELETE CASCADE,
       prefer_local_playback INTEGER NOT NULL DEFAULT 0,
+      youtube_embed_blocked_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -144,6 +145,13 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
     if (!videoDownloadColumns.some((column) => column.name === name)) {
       db.exec(`ALTER TABLE video_downloads ADD COLUMN ${name} ${type}`);
     }
+  }
+
+  const videoPreferenceColumns = db.prepare(`PRAGMA table_info(video_preferences)`).all() as Array<{
+    name: string;
+  }>;
+  if (!videoPreferenceColumns.some((column) => column.name === "youtube_embed_blocked_at")) {
+    db.exec(`ALTER TABLE video_preferences ADD COLUMN youtube_embed_blocked_at TEXT`);
   }
 
   const videoProgressColumns = db.prepare(`PRAGMA table_info(video_progress)`).all() as Array<{
@@ -236,14 +244,16 @@ export type VideoProgress = {
 export type VideoPreference = {
   video_id: string;
   prefer_local_playback: boolean;
+  youtube_embed_blocked_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
 function normalizeVideoPreference(
   preference:
-    | (Omit<VideoPreference, "prefer_local_playback"> & {
+    | (Omit<VideoPreference, "prefer_local_playback" | "youtube_embed_blocked_at"> & {
         prefer_local_playback?: number | boolean | null;
+        youtube_embed_blocked_at?: string | null;
       })
     | undefined
 ) {
@@ -251,7 +261,8 @@ function normalizeVideoPreference(
   return {
     ...preference,
     prefer_local_playback:
-      preference.prefer_local_playback === true || preference.prefer_local_playback === 1
+      preference.prefer_local_playback === true || preference.prefer_local_playback === 1,
+    youtube_embed_blocked_at: preference.youtube_embed_blocked_at ?? null
   } as VideoPreference;
 }
 
@@ -505,8 +516,9 @@ export function getVideoPreference(videoId: string) {
   }
   return normalizeVideoPreference(
     db.prepare(`SELECT * FROM video_preferences WHERE video_id = ?`).get(videoId) as
-      | (Omit<VideoPreference, "prefer_local_playback"> & {
+      | (Omit<VideoPreference, "prefer_local_playback" | "youtube_embed_blocked_at"> & {
           prefer_local_playback?: number | boolean | null;
+          youtube_embed_blocked_at?: string | null;
         })
       | undefined
   );
@@ -514,12 +526,24 @@ export function getVideoPreference(videoId: string) {
 
 export function setVideoPreference(
   videoId: string,
-  values: { prefer_local_playback: boolean }
+  values: {
+    prefer_local_playback?: boolean;
+    youtube_embed_blocked_at?: string | null;
+  }
 ) {
+  const current = getVideoPreference(videoId);
+  const preferLocalPlayback =
+    values.prefer_local_playback ?? current?.prefer_local_playback ?? false;
+  const youtubeEmbedBlockedAt =
+    values.youtube_embed_blocked_at === undefined
+      ? current?.youtube_embed_blocked_at ?? null
+      : values.youtube_embed_blocked_at;
+
   if (process.env.DEMO_MODE_ENABLED === "true") {
     return {
       video_id: videoId,
-      prefer_local_playback: values.prefer_local_playback,
+      prefer_local_playback: preferLocalPlayback,
+      youtube_embed_blocked_at: youtubeEmbedBlockedAt,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     } as VideoPreference;
@@ -527,12 +551,13 @@ export function setVideoPreference(
 
   db.prepare(
     `INSERT INTO video_preferences
-      (video_id, prefer_local_playback, created_at, updated_at)
-     VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      (video_id, prefer_local_playback, youtube_embed_blocked_at, created_at, updated_at)
+     VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
      ON CONFLICT(video_id) DO UPDATE SET
       prefer_local_playback = excluded.prefer_local_playback,
+      youtube_embed_blocked_at = excluded.youtube_embed_blocked_at,
       updated_at = excluded.updated_at`
-  ).run(videoId, values.prefer_local_playback ? 1 : 0);
+  ).run(videoId, preferLocalPlayback ? 1 : 0, youtubeEmbedBlockedAt);
 
   return getVideoPreference(videoId);
 }

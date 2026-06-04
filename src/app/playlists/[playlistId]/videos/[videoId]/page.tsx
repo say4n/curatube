@@ -94,6 +94,7 @@ export default async function VideoPage({
         initialProgressSeconds={progress?.position_seconds ?? 0}
         initialVideoProgress={videoProgress}
         initialPreferLocalPlayback={preference?.prefer_local_playback ?? null}
+        initialYoutubeEmbedBlocked={Boolean(preference?.youtube_embed_blocked_at)}
         initialDownloadStatus={initialDownloadStatus}
       />
     </main>
