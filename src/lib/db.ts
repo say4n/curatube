@@ -30,7 +30,6 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
   db.pragma("busy_timeout = 5000");
   db.pragma("foreign_keys = ON");
 
-
   db.exec(`
     CREATE TABLE IF NOT EXISTS playlists (
       id TEXT PRIMARY KEY,
@@ -41,6 +40,7 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
       video_count INTEGER NOT NULL DEFAULT 0,
       import_status TEXT NOT NULL DEFAULT 'ready',
       import_error TEXT,
+      archived_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -106,6 +106,13 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  const playlistColumns = db.prepare(`PRAGMA table_info(playlists)`).all() as Array<{
+    name: string;
+  }>;
+  if (!playlistColumns.some((column) => column.name === "archived_at")) {
+    db.exec(`ALTER TABLE playlists ADD COLUMN archived_at TEXT`);
+  }
 }
 
 export type Playlist = {
@@ -115,8 +122,10 @@ export type Playlist = {
   channel: string | null;
   thumbnail_url: string | null;
   video_count: number;
+  completed_video_count: number;
   import_status: string;
   import_error: string | null;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
   last_watched_at: string | null;
@@ -199,12 +208,23 @@ function getDemoData() {
 
 export function getPlaylists() {
   if (process.env.DEMO_MODE_ENABLED === "true") {
-    return (getDemoData().playlists || []) as Playlist[];
+    return (getDemoData().playlists || []).map((playlist: any) => ({
+      completed_video_count: 0,
+      archived_at: null,
+      ...playlist
+    })) as Playlist[];
   }
   return db
     .prepare(
       `SELECT
          p.*,
+         (
+           SELECT COUNT(*)
+           FROM videos v
+           JOIN video_progress vp ON vp.video_id = v.id
+           WHERE v.playlist_id = p.id
+             AND vp.completed = 1
+         ) AS completed_video_count,
          (
            SELECT MAX(vp.updated_at)
            FROM videos v
@@ -238,12 +258,26 @@ export function getImportJob(id: string) {
 
 export function getPlaylist(id: string) {
   if (process.env.DEMO_MODE_ENABLED === "true") {
-    return (getDemoData().playlists || []).find((p: any) => p.id === id) as Playlist | undefined;
+    const playlist = (getDemoData().playlists || []).find((p: any) => p.id === id);
+    return playlist
+      ? ({
+          completed_video_count: 0,
+          archived_at: null,
+          ...playlist
+        } as Playlist)
+      : undefined;
   }
   return db
     .prepare(
       `SELECT
          p.*,
+         (
+           SELECT COUNT(*)
+           FROM videos v
+           JOIN video_progress vp ON vp.video_id = v.id
+           WHERE v.playlist_id = p.id
+             AND vp.completed = 1
+         ) AS completed_video_count,
          (
            SELECT MAX(vp.updated_at)
            FROM videos v
@@ -254,6 +288,27 @@ export function getPlaylist(id: string) {
        WHERE p.id = ?`
     )
     .get(id) as Playlist | undefined;
+}
+
+export function setPlaylistArchived(playlistId: string, archived: boolean) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    const playlist = (getDemoData().playlists || []).find((p: any) => p.id === playlistId);
+    if (!playlist) return undefined;
+
+    return {
+      ...playlist,
+      archived_at: archived ? new Date().toISOString() : null
+    } as Playlist;
+  }
+
+  db.prepare(
+    `UPDATE playlists
+     SET archived_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`
+  ).run(archived ? 1 : 0, playlistId);
+
+  return getPlaylist(playlistId);
 }
 
 export function getPlaylistVideos(playlistId: string) {
