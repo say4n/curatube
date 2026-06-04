@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 FROM node:24-bookworm-slim AS base
 
 ENV PNPM_HOME="/pnpm"
@@ -23,7 +25,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+  pnpm install --frozen-lockfile --store-dir /pnpm/store
 
 FROM deps AS dev
 COPY . .

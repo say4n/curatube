@@ -2,9 +2,17 @@ node_modules
 .next
 data
 .git
+.github
+.antigravitycli
 .pnpm-store
+.vscode
+assets
 npm-debug.log*
 pnpm-debug.log*
 .env
 .env.*
 !.env.example
+.DS_Store
+*.tsbuildinfo
+coverage
+.nyc_output

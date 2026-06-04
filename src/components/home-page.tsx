@@ -632,7 +632,14 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
           <span>
             Curatube
             {buildCommit ? (
-              <span className="ml-2 font-mono text-xs text-[#82786b]">{buildCommit}</span>
+              <a
+                href={`https://github.com/say4n/curatube/commit/${buildCommit}`}
+                target="_blank"
+                rel="noreferrer"
+                className="ml-2 font-mono text-xs text-[#82786b] transition hover:text-moss"
+              >
+                {buildCommit}
+              </a>
             ) : null}
           </span>
           <a
