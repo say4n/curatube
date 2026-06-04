@@ -55,6 +55,7 @@ type Props = {
   initialNote: string;
   initialProgressSeconds: number;
   initialVideoProgress: VideoProgress[];
+  initialPreferLocalPlayback: boolean;
   initialDownloadStatus: DownloadStatus | null;
 };
 
@@ -64,6 +65,11 @@ type DownloadStatus = {
   video_id: string;
   status: "missing" | "queued" | "running" | "ready" | "failed";
   file_size_bytes: number | null;
+  progress_percent: number | null;
+  downloaded_bytes: number | null;
+  total_bytes: number | null;
+  speed_bytes_per_second: number | null;
+  eta_seconds: number | null;
   error: string | null;
 };
 
@@ -95,6 +101,18 @@ function formatBytes(bytes: number | null) {
   return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
+function formatDuration(seconds: number | null) {
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return null;
+  const rounded = Math.round(seconds);
+  const minutes = Math.floor(rounded / 60);
+  const remainingSeconds = rounded % 60;
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
+function joinMetadata(parts: Array<string | null>) {
+  return parts.filter(Boolean).join(" · ");
+}
+
 export function LearningWorkspace({
   playlist,
   videos,
@@ -103,6 +121,7 @@ export function LearningWorkspace({
   initialNote,
   initialProgressSeconds,
   initialVideoProgress,
+  initialPreferLocalPlayback,
   initialDownloadStatus
 }: Props) {
   const [notesOpen, setNotesOpen] = useState(true);
@@ -113,6 +132,7 @@ export function LearningWorkspace({
   const [embedBlocked, setEmbedBlocked] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(initialDownloadStatus);
   const [downloadBusy, setDownloadBusy] = useState(false);
+  const [preferLocalPlayback, setPreferLocalPlayback] = useState(initialPreferLocalPlayback);
   const [pendingLocalSeek, setPendingLocalSeek] = useState<number | null>(null);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(initialProgressSeconds);
   const [videoCompletion, setVideoCompletion] = useState<Record<string, boolean>>(() =>
@@ -137,7 +157,48 @@ export function LearningWorkspace({
   const downloadIsActive =
     downloadStatus?.status === "queued" || downloadStatus?.status === "running";
   const localVideoReady = downloadStatus?.status === "ready";
-  const shouldUseYouTubePlayer = !localVideoReady;
+  const localVideoActive = localVideoReady && (preferLocalPlayback || embedBlocked);
+  const shouldUseYouTubePlayer = !localVideoActive;
+  const downloadProgressPercent =
+    typeof downloadStatus?.progress_percent === "number" &&
+    Number.isFinite(downloadStatus.progress_percent)
+      ? Math.max(0, Math.min(100, downloadStatus.progress_percent))
+      : null;
+  const downloadIsFinalizing =
+    downloadIsActive && downloadProgressPercent !== null && downloadProgressPercent >= 99.95;
+  const validDownloadTotalBytes =
+    typeof downloadStatus?.downloaded_bytes === "number" &&
+    typeof downloadStatus?.total_bytes === "number" &&
+    downloadStatus.total_bytes >= downloadStatus.downloaded_bytes
+      ? downloadStatus.total_bytes
+      : null;
+  const downloadedLabel = formatBytes(downloadStatus?.downloaded_bytes ?? null);
+  const totalLabel = formatBytes(validDownloadTotalBytes);
+  const transferLabel =
+    downloadedLabel && totalLabel
+      ? `${downloadedLabel} of ${totalLabel}`
+      : downloadedLabel;
+  const speedLabel =
+    downloadIsActive &&
+    !downloadIsFinalizing &&
+    typeof downloadStatus?.speed_bytes_per_second === "number" &&
+    downloadStatus.speed_bytes_per_second >= 1024
+      ? `${formatBytes(downloadStatus.speed_bytes_per_second)}/s`
+      : null;
+  const etaLabel =
+    downloadIsActive && !downloadIsFinalizing
+      ? formatDuration(downloadStatus?.eta_seconds ?? null)
+      : null;
+  const downloadProgressDetail = joinMetadata([
+    transferLabel,
+    speedLabel,
+    etaLabel ? `ETA ${etaLabel}` : null
+  ]);
+  const showDownloadPanel =
+    downloadIsActive ||
+    downloadStatus?.status === "ready" ||
+    downloadStatus?.status === "failed" ||
+    Boolean(downloadStatus?.error);
   const activeTranscriptIndex = useMemo(() => {
     if (transcriptSegments.length === 0) return -1;
 
@@ -164,6 +225,7 @@ export function LearningWorkspace({
     setPlayerReady(false);
     setEmbedBlocked(false);
     setDownloadStatus(initialDownloadStatus);
+    setPreferLocalPlayback(initialPreferLocalPlayback);
     setPendingLocalSeek(null);
     setCurrentPlaybackTime(initialProgressSeconds);
     isUnloadingRef.current = false;
@@ -238,7 +300,7 @@ export function LearningWorkspace({
   }, [initialProgressSeconds, playerElementId, shouldUseYouTubePlayer, video.youtube_id]);
 
   useEffect(() => {
-    if (!playerReady || embedBlocked || localVideoReady) return;
+    if (!playerReady || embedBlocked || localVideoActive) return;
 
     const interval = window.setInterval(() => {
       const currentTime = playerRef.current?.getCurrentTime?.();
@@ -249,10 +311,10 @@ export function LearningWorkspace({
     }, 5000);
 
     return () => window.clearInterval(interval);
-  }, [embedBlocked, localVideoReady, playerReady, video.id]);
+  }, [embedBlocked, localVideoActive, playerReady, video.id]);
 
   useEffect(() => {
-    if (!playerReady || embedBlocked || localVideoReady) return;
+    if (!playerReady || embedBlocked || localVideoActive) return;
 
     const interval = window.setInterval(() => {
       const currentTime = playerRef.current?.getCurrentTime?.();
@@ -262,7 +324,7 @@ export function LearningWorkspace({
     }, 750);
 
     return () => window.clearInterval(interval);
-  }, [embedBlocked, localVideoReady, playerReady, video.id]);
+  }, [embedBlocked, localVideoActive, playerReady, video.id]);
 
   useEffect(() => {
     if (activeTranscriptIndex < 0) return;
@@ -307,7 +369,7 @@ export function LearningWorkspace({
   }, [embedBlocked, encodedVideoId]);
 
   useEffect(() => {
-    if (!embedBlocked || !downloadIsActive) return;
+    if (!downloadIsActive) return;
 
     const interval = window.setInterval(async () => {
       const response = await fetch(`/api/videos/${encodedVideoId}/download`, {
@@ -319,14 +381,14 @@ export function LearningWorkspace({
     }, 1800);
 
     return () => window.clearInterval(interval);
-  }, [downloadIsActive, embedBlocked, encodedVideoId]);
+  }, [downloadIsActive, encodedVideoId]);
 
   useEffect(() => {
-    if (pendingLocalSeek === null || !localVideoReady || !localVideoRef.current) return;
+    if (pendingLocalSeek === null || !localVideoActive || !localVideoRef.current) return;
 
     playLocalVideoFrom(pendingLocalSeek);
     setPendingLocalSeek(null);
-  }, [localVideoReady, pendingLocalSeek]);
+  }, [localVideoActive, pendingLocalSeek]);
 
   function playLocalVideoFrom(seconds: number) {
     const element = localVideoRef.current;
@@ -352,12 +414,12 @@ export function LearningWorkspace({
   async function saveProgress(completed?: boolean, positionOverride?: number, durationOverride?: number | null) {
     const position =
       positionOverride ??
-      (localVideoReady
+      (localVideoActive
         ? localVideoRef.current?.currentTime
         : playerRef.current?.getCurrentTime?.());
     const duration =
       durationOverride ??
-      (localVideoReady ? localVideoRef.current?.duration : playerRef.current?.getDuration?.());
+      (localVideoActive ? localVideoRef.current?.duration : playerRef.current?.getDuration?.());
 
     if (typeof position !== "number" || Number.isNaN(position) || position < 0) return;
 
@@ -421,7 +483,7 @@ export function LearningWorkspace({
   }
 
   function seekTo(seconds: number) {
-    if (localVideoReady && localVideoRef.current) {
+    if (localVideoActive && localVideoRef.current) {
       playLocalVideoFrom(seconds);
       setCurrentPlaybackTime(seconds);
     } else if (embedBlocked) {
@@ -447,6 +509,31 @@ export function LearningWorkspace({
       setDownloadStatus(data.download);
     } finally {
       setDownloadBusy(false);
+    }
+  }
+
+  async function togglePreferredPlayer() {
+    if (!localVideoReady) return;
+
+    const nextPreferLocal = !preferLocalPlayback;
+    setPreferLocalPlayback(nextPreferLocal);
+
+    const response = await fetch(`/api/videos/${encodedVideoId}/preferences`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prefer_local_playback: nextPreferLocal })
+    });
+
+    if (!response.ok) {
+      setPreferLocalPlayback(!nextPreferLocal);
+      return;
+    }
+
+    const data = (await response.json()) as {
+      preferences: { prefer_local_playback: boolean } | null;
+    };
+    if (data.preferences) {
+      setPreferLocalPlayback(data.preferences.prefer_local_playback);
     }
   }
 
@@ -614,7 +701,7 @@ export function LearningWorkspace({
                       className={`h-full w-full ${embedBlocked ? "invisible pointer-events-none" : ""}`}
                     />
                   ) : null}
-                  {localVideoReady ? (
+                  {localVideoActive ? (
                     <video
                       ref={localVideoRef}
                       src={`/api/videos/${encodedVideoId}/media`}
@@ -659,7 +746,7 @@ export function LearningWorkspace({
                     />
                   ) : null}
                 </div>
-                {embedBlocked && !localVideoReady ? (
+                {embedBlocked && !localVideoActive ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-[#171717]/95 px-5 text-center text-white">
                     <div className="max-w-lg">
                       <Download className="mx-auto mb-4 text-white/85" size={34} />
@@ -686,7 +773,7 @@ export function LearningWorkspace({
                       <Loader2 size={16} className="animate-spin text-moss" />
                     )}
                     <span>
-                      {localVideoReady
+                      {localVideoActive
                         ? "Local download"
                         : embedBlocked
                           ? downloadIsActive
@@ -697,7 +784,56 @@ export function LearningWorkspace({
                           : "Loading player"}
                     </span>
                   </div>
-                  {embedBlocked || localVideoReady ? (
+                  {showDownloadPanel ? (
+                    <div className="mt-2 min-h-[76px] max-w-md rounded-md border border-[#e1d9cc] bg-white px-3 py-2 shadow-sm">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#6c6257]">
+                          {downloadStatus?.status === "ready"
+                            ? "Downloaded video"
+                            : downloadStatus?.status === "failed"
+                              ? "Download failed"
+                              : "Downloading video"}
+                        </span>
+                        <span className="min-w-[86px] rounded-full bg-cloud px-2 py-0.5 text-center font-mono text-xs font-bold text-moss">
+                          {downloadStatus?.status === "ready"
+                            ? "Ready"
+                            : downloadStatus?.status === "failed"
+                              ? "Failed"
+                              : downloadIsFinalizing
+                                ? "Finalizing"
+                                : downloadProgressPercent !== null
+                                  ? `${downloadProgressPercent.toFixed(1)}%`
+                                  : "Starting"}
+                        </span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-[#e8e1d6]">
+                        <div
+                          className="h-full rounded-full bg-moss transition-[width] duration-500 ease-out"
+                          style={{
+                            width:
+                              downloadStatus?.status === "ready"
+                                ? "100%"
+                                : `${downloadProgressPercent ?? 6}%`
+                          }}
+                        />
+                      </div>
+                      {downloadStatus?.status === "ready" &&
+                      formatBytes(downloadStatus.file_size_bytes) ? (
+                        <div className="mt-1.5 truncate font-mono text-xs leading-5 text-[#81776a]">
+                          {formatBytes(downloadStatus.file_size_bytes)}
+                        </div>
+                      ) : downloadProgressDetail ? (
+                        <div className="mt-1.5 truncate font-mono text-xs leading-5 text-[#81776a]">
+                          {downloadProgressDetail}
+                        </div>
+                      ) : downloadStatus?.error ? (
+                        <div className="mt-1.5 truncate text-xs leading-5 text-rust">
+                          {downloadStatus.error}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {downloadStatus && !showDownloadPanel ? (
                     <div className="mt-0.5 text-xs leading-5 text-[#81776a]">
                       {downloadStatus?.status === "ready" &&
                       formatBytes(downloadStatus.file_size_bytes) ? (
@@ -714,25 +850,33 @@ export function LearningWorkspace({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-                  {embedBlocked || localVideoReady ? (
-                    <>
-                      {downloadStatus?.status === "failed" ||
-                      downloadStatus?.status === "missing" ||
-                      !downloadStatus ? (
-                        <button
-                          type="button"
-                          onClick={startDownload}
-                          className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-[#2d2924]"
-                        >
-                          {downloadBusy ? (
-                            <Loader2 className="animate-spin" size={15} />
-                          ) : (
-                            <Download size={15} />
-                          )}
-                          Download
-                        </button>
-                      ) : null}
-                      <button
+                  {downloadStatus?.status === "failed" ||
+                  downloadStatus?.status === "missing" ||
+                  !downloadStatus ? (
+                    <button
+                      type="button"
+                      onClick={startDownload}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-[#2d2924]"
+                    >
+                      {downloadBusy ? (
+                        <Loader2 className="animate-spin" size={15} />
+                      ) : (
+                        <Download size={15} />
+                      )}
+                      Download
+                    </button>
+                  ) : null}
+                  {localVideoReady && !embedBlocked ? (
+                    <button
+                      type="button"
+                      onClick={togglePreferredPlayer}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-xs font-bold text-ink transition hover:bg-cloud"
+                    >
+                      {preferLocalPlayback ? <ExternalLink size={15} /> : <Download size={15} />}
+                      {preferLocalPlayback ? "Use YouTube" : "Use local"}
+                    </button>
+                  ) : null}
+                  <button
                         type="button"
                         onClick={refreshDownloadStatus}
                         aria-label="Refresh download status"
@@ -770,8 +914,6 @@ export function LearningWorkspace({
                       >
                         <ExternalLink size={15} />
                       </a>
-                    </>
-                  ) : null}
                   <button
                     type="button"
                     onClick={() => setNotesOpen((open) => !open)}

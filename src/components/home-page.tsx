@@ -321,13 +321,13 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
 
           <form onSubmit={submitImport} className="flex flex-col gap-3 md:flex-row">
             <label className="sr-only" htmlFor="playlist-url">
-              YouTube playlist URL
+              YouTube playlist or video URL
             </label>
             <input
               id="playlist-url"
               value={url}
               onChange={(event) => setUrl(event.target.value)}
-              placeholder="Paste a YouTube playlist URL"
+              placeholder="Paste a YouTube playlist or video URL"
               className="min-h-16 flex-1 rounded-md border border-[#c9c0b2] bg-white px-5 text-lg text-ink shadow-sm outline-none transition placeholder:text-[#82786b] focus:border-moss focus:ring-4 focus:ring-moss/15"
               required
             />
@@ -375,7 +375,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
       <section className="mx-auto w-full max-w-6xl flex-1 px-5 py-8">
         <div className="mb-4">
           <div>
-            <h2 className="text-2xl font-black text-ink">Imported playlists</h2>
+            <h2 className="text-2xl font-black text-ink">Continue learning</h2>
             <span className="text-sm font-semibold text-[#6c6257]">
               {playlists.length === activePlaylistCount && playlistFilter === "active"
                 ? `${activePlaylistCount} courses`
@@ -523,7 +523,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
           <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed border-[#c9c0b2] bg-[#fffdf8] px-5 text-center">
             <BookOpen className="mb-4 text-moss" size={34} />
             <p className="max-w-md text-base font-semibold text-ink">
-              Imported playlists will appear here after yt-dlp finishes fetching metadata.
+              Courses will appear here after yt-dlp finishes fetching metadata.
             </p>
           </div>
         ) : playlists.length === 0 ? (

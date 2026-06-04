@@ -3,12 +3,14 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 import { LearningWorkspace } from "@/components/learning-workspace";
 import { ExportNotesButtons } from "@/components/export-notes-buttons";
+import { DeletePlaylistButton } from "@/components/delete-playlist-button";
 import {
   getNote,
   getPlaylist,
   getPlaylistVideoProgress,
   getPlaylistVideos,
   getVideoDownload,
+  getVideoPreference,
   getVideoProgress,
   getTranscript,
   getVideo
@@ -43,6 +45,7 @@ export default async function VideoPage({
   const note = getNote(video.id);
   const videoProgress = getPlaylistVideoProgress(playlistId);
   const progress = getVideoProgress(video.id);
+  const preference = getVideoPreference(video.id);
   const download = getVideoDownload(video.id);
   const refreshedDownload =
     download?.status === "ready" ? await prepareVideoDownloadForStreaming(video.id) : download;
@@ -51,6 +54,11 @@ export default async function VideoPage({
         video_id: refreshedDownload.video_id,
         status: refreshedDownload.status,
         file_size_bytes: refreshedDownload.file_size_bytes,
+        progress_percent: refreshedDownload.progress_percent,
+        downloaded_bytes: refreshedDownload.downloaded_bytes,
+        total_bytes: refreshedDownload.total_bytes,
+        speed_bytes_per_second: refreshedDownload.speed_bytes_per_second,
+        eta_seconds: refreshedDownload.eta_seconds,
         error: refreshedDownload.error
       }
     : null;
@@ -72,6 +80,7 @@ export default async function VideoPage({
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
             <ExportNotesButtons playlistId={playlist.id} playlistTitle={playlist.title} />
+            <DeletePlaylistButton playlistId={playlist.id} playlistTitle={playlist.title} />
           </div>
         </div>
       </div>
@@ -84,6 +93,7 @@ export default async function VideoPage({
         initialNote={note}
         initialProgressSeconds={progress?.position_seconds ?? 0}
         initialVideoProgress={videoProgress}
+        initialPreferLocalPlayback={preference?.prefer_local_playback ?? false}
         initialDownloadStatus={initialDownloadStatus}
       />
     </main>

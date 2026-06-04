@@ -15,7 +15,9 @@ const flatPlaylistSchema = z.object({
   title: z.string().optional(),
   channel: z.string().optional(),
   uploader: z.string().optional(),
+  duration: z.number().optional().nullable(),
   webpage_url: z.string().optional(),
+  url: z.string().optional(),
   thumbnail: z.string().optional(),
   thumbnails: z.array(z.object({ url: z.string().optional() })).optional(),
   entries: z
@@ -31,6 +33,24 @@ const flatPlaylistSchema = z.object({
     )
     .default([])
 });
+
+type ImportedVideo = {
+  id: string;
+  playlistId: string;
+  youtubeId: string;
+  title: string;
+  thumbnail: string | null;
+  duration: number | null;
+  position: number;
+};
+
+type ImportedPlaylist = {
+  id: string;
+  title: string;
+  channel: string | null;
+  thumbnail: string | null;
+  videos: ImportedVideo[];
+};
 
 function now() {
   return new Date().toISOString();
@@ -53,6 +73,24 @@ function bestThumbnail(input: {
 
 function videoUrl(youtubeId: string) {
   return `https://www.youtube.com/watch?v=${youtubeId}`;
+}
+
+function youtubeIdFromUrl(value: string) {
+  try {
+    const url = new URL(value);
+    if (url.hostname.includes("youtu.be")) {
+      return url.pathname.split("/").filter(Boolean)[0] ?? null;
+    }
+    return url.searchParams.get("v");
+  } catch {
+    return null;
+  }
+}
+
+function entryYoutubeId(entry: { id?: string; url?: string }) {
+  if (entry.id) return entry.id;
+  if (!entry.url) return null;
+  return youtubeIdFromUrl(entry.url) ?? entry.url;
 }
 
 function setJob(
@@ -116,6 +154,59 @@ async function fetchPlaylist(sourceUrl: string) {
   );
 
   return flatPlaylistSchema.parse(JSON.parse(stdout));
+}
+
+function normalizeImportedPlaylist(sourceUrl: string, raw: z.infer<typeof flatPlaylistSchema>, jobId: string): ImportedPlaylist {
+  if (raw.entries.length > 0) {
+    const playlistId = safeId(raw.id ?? new URL(sourceUrl).searchParams.get("list") ?? jobId);
+    const entries = raw.entries
+      .map((entry) => ({ ...entry, youtubeId: entryYoutubeId(entry) }))
+      .filter((entry) => entry.youtubeId);
+    const videos = entries.map((entry, index) => {
+      const youtubeId = entry.youtubeId!;
+      return {
+        id: `${playlistId}:${youtubeId}`,
+        playlistId,
+        youtubeId,
+        title: entry.title ?? "Untitled video",
+        thumbnail: bestThumbnail(entry),
+        duration: entry.duration ?? null,
+        position: index + 1
+      };
+    });
+
+    return {
+      id: playlistId,
+      title: raw.title ?? "Imported playlist",
+      channel: raw.channel ?? raw.uploader ?? null,
+      thumbnail: bestThumbnail(raw),
+      videos
+    };
+  }
+
+  const youtubeId = raw.id ?? youtubeIdFromUrl(raw.webpage_url ?? sourceUrl) ?? youtubeIdFromUrl(sourceUrl);
+  if (!youtubeId) {
+    throw new Error("Could not find a YouTube video or playlist in that URL.");
+  }
+
+  const playlistId = safeId(youtubeId);
+  return {
+    id: playlistId,
+    title: raw.title ?? "Imported video",
+    channel: raw.channel ?? raw.uploader ?? null,
+    thumbnail: bestThumbnail(raw),
+    videos: [
+      {
+        id: `${playlistId}:${youtubeId}`,
+        playlistId,
+        youtubeId,
+        title: raw.title ?? "Untitled video",
+        thumbnail: bestThumbnail(raw),
+        duration: raw.duration ?? null,
+        position: 1
+      }
+    ]
+  };
 }
 
 export async function fetchTranscript(youtubeId: string) {
@@ -203,22 +294,8 @@ async function runImport(jobId: string) {
   if (!job) return;
 
   try {
-    setJob(jobId, { status: "running", progress: 5, message: "Fetching playlist metadata" });
-    const playlist = await fetchPlaylist(job.source_url);
-    const playlistId = safeId(playlist.id ?? new URL(job.source_url).searchParams.get("list") ?? jobId);
-    const entries = playlist.entries.filter((entry) => entry.id ?? entry.url);
-    const videos = entries.map((entry, index) => {
-      const youtubeId = entry.id ?? entry.url!;
-      return {
-        id: `${playlistId}:${youtubeId}`,
-        playlistId,
-        youtubeId,
-        title: entry.title ?? "Untitled video",
-        thumbnail: bestThumbnail(entry),
-        duration: entry.duration ?? null,
-        position: index + 1
-      };
-    });
+    setJob(jobId, { status: "running", progress: 5, message: "Fetching YouTube metadata" });
+    const playlist = normalizeImportedPlaylist(job.source_url, await fetchPlaylist(job.source_url), jobId);
 
     db.transaction(() => {
       db.prepare(
@@ -233,28 +310,34 @@ async function runImport(jobId: string) {
           video_count = excluded.video_count,
           import_status = 'importing',
           import_error = NULL,
+          deleted_at = NULL,
           updated_at = excluded.updated_at`
       ).run(
-        playlistId,
+        playlist.id,
         job.source_url,
-        playlist.title ?? "Imported playlist",
-        playlist.channel ?? playlist.uploader ?? null,
-        bestThumbnail(playlist),
-        videos.length,
+        playlist.title,
+        playlist.channel,
+        playlist.thumbnail,
+        playlist.videos.length,
         now(),
         now()
       );
 
-      db.prepare(`DELETE FROM transcript_segments WHERE video_id IN (SELECT id FROM videos WHERE playlist_id = ?)`).run(playlistId);
-      db.prepare(`DELETE FROM videos WHERE playlist_id = ?`).run(playlistId);
-
       const insertVideo = db.prepare(
         `INSERT INTO videos
           (id, playlist_id, youtube_id, title, thumbnail_url, duration_seconds, position, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+          playlist_id = excluded.playlist_id,
+          youtube_id = excluded.youtube_id,
+          title = excluded.title,
+          thumbnail_url = excluded.thumbnail_url,
+          duration_seconds = excluded.duration_seconds,
+          position = excluded.position,
+          updated_at = excluded.updated_at`
       );
 
-      for (const video of videos) {
+      for (const video of playlist.videos) {
         insertVideo.run(
           video.id,
           video.playlistId,
@@ -267,12 +350,24 @@ async function runImport(jobId: string) {
           now()
         );
       }
+
+      const importedVideoIds = playlist.videos.map((video) => video.id);
+      if (importedVideoIds.length > 0) {
+        db.prepare(
+          `DELETE FROM videos
+           WHERE playlist_id = ?
+             AND id NOT IN (${importedVideoIds.map(() => "?").join(", ")})`
+        ).run(playlist.id, ...importedVideoIds);
+      }
     })();
 
     setJob(jobId, {
       progress: 20,
-      message: `Imported metadata for ${videos.length} videos`,
-      playlist_id: playlistId
+      message:
+        playlist.videos.length === 1
+          ? "Imported metadata for 1 video"
+          : `Imported metadata for ${playlist.videos.length} videos`,
+      playlist_id: playlist.id
     });
 
     const insertSegment = db.prepare(
@@ -281,10 +376,10 @@ async function runImport(jobId: string) {
        VALUES (?, ?, ?, ?, ?)`
     );
 
-    for (const [index, video] of videos.entries()) {
+    for (const [index, video] of playlist.videos.entries()) {
       setJob(jobId, {
-        progress: 20 + Math.floor((index / Math.max(videos.length, 1)) * 75),
-        message: `Fetching transcripts (${index + 1}/${videos.length})`
+        progress: 20 + Math.floor((index / Math.max(playlist.videos.length, 1)) * 75),
+        message: `Fetching transcripts (${index + 1}/${playlist.videos.length})`
       });
 
       const segments = await fetchTranscript(video.youtubeId);
@@ -306,9 +401,9 @@ async function runImport(jobId: string) {
       `UPDATE playlists
        SET import_status = 'ready', import_error = NULL, updated_at = ?
        WHERE id = ?`
-    ).run(now(), playlistId);
+    ).run(now(), playlist.id);
 
-    setJob(jobId, { status: "complete", progress: 100, message: "Import complete", playlist_id: playlistId });
+    setJob(jobId, { status: "complete", progress: 100, message: "Import complete", playlist_id: playlist.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Import failed";
     const current = getImportJob(jobId);

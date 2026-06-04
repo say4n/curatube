@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
@@ -55,14 +55,36 @@ function ensureDownloadRow(videoId: string) {
 function setDownload(
   videoId: string,
   values: Partial<
-    Pick<VideoDownload, "status" | "file_path" | "file_size_bytes" | "mime_type" | "error">
+    Pick<
+      VideoDownload,
+      | "status"
+      | "file_path"
+      | "file_size_bytes"
+      | "mime_type"
+      | "progress_percent"
+      | "downloaded_bytes"
+      | "total_bytes"
+      | "speed_bytes_per_second"
+      | "eta_seconds"
+      | "error"
+    >
   >
 ) {
   const current = ensureDownloadRow(videoId);
 
   db.prepare(
     `UPDATE video_downloads
-     SET status = ?, file_path = ?, file_size_bytes = ?, mime_type = ?, error = ?, updated_at = ?
+     SET status = ?,
+         file_path = ?,
+         file_size_bytes = ?,
+         mime_type = ?,
+         progress_percent = ?,
+         downloaded_bytes = ?,
+         total_bytes = ?,
+         speed_bytes_per_second = ?,
+         eta_seconds = ?,
+         error = ?,
+         updated_at = ?
      WHERE video_id = ?`
   ).run(
     values.status ?? current.status,
@@ -71,10 +93,92 @@ function setDownload(
       ? current.file_size_bytes
       : values.file_size_bytes,
     values.mime_type === undefined ? current.mime_type : values.mime_type,
+    values.progress_percent === undefined
+      ? current.progress_percent
+      : values.progress_percent,
+    values.downloaded_bytes === undefined
+      ? current.downloaded_bytes
+      : values.downloaded_bytes,
+    values.total_bytes === undefined ? current.total_bytes : values.total_bytes,
+    values.speed_bytes_per_second === undefined
+      ? current.speed_bytes_per_second
+      : values.speed_bytes_per_second,
+    values.eta_seconds === undefined ? current.eta_seconds : values.eta_seconds,
     values.error === undefined ? current.error : values.error,
     now(),
     videoId
   );
+}
+
+function nullableNumber(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "NA" || trimmed === "N/A") return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseDownloadProgress(line: string) {
+  if (!line.startsWith("curatube-progress:")) return null;
+
+  const [, percent, downloadedBytes, totalBytes, speed, eta] = line.split("|");
+  const progressPercent = nullableNumber(percent?.replace("%", "") ?? "");
+  const parsedDownloadedBytes = nullableNumber(downloadedBytes ?? "");
+  const parsedTotalBytes = nullableNumber(totalBytes ?? "");
+
+  return {
+    progress_percent: progressPercent === null ? null : Math.max(0, Math.min(100, progressPercent)),
+    downloaded_bytes: parsedDownloadedBytes,
+    total_bytes:
+      parsedDownloadedBytes !== null &&
+      parsedTotalBytes !== null &&
+      parsedTotalBytes < parsedDownloadedBytes
+        ? null
+        : parsedTotalBytes,
+    speed_bytes_per_second: nullableNumber(speed ?? ""),
+    eta_seconds: nullableNumber(eta ?? "")
+  };
+}
+
+async function runYtDlp(args: string[], onLine: (line: string) => void) {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn("yt-dlp", args, {
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    let output = "";
+    let stderr = "";
+    let stdoutBuffer = "";
+    let stderrBuffer = "";
+
+    function handleChunk(chunk: Buffer, stream: "stdout" | "stderr") {
+      const text = chunk.toString("utf8");
+      if (stream === "stdout") {
+        output += text;
+        stdoutBuffer += text;
+        const lines = stdoutBuffer.split(/\r?\n/);
+        stdoutBuffer = lines.pop() ?? "";
+        for (const line of lines) onLine(line.trim());
+      } else {
+        stderr += text;
+        stderrBuffer += text;
+        const lines = stderrBuffer.split(/\r?\n/);
+        stderrBuffer = lines.pop() ?? "";
+        for (const line of lines) onLine(line.trim());
+      }
+    }
+
+    child.stdout.on("data", (chunk: Buffer) => handleChunk(chunk, "stdout"));
+    child.stderr.on("data", (chunk: Buffer) => handleChunk(chunk, "stderr"));
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (stdoutBuffer.trim()) onLine(stdoutBuffer.trim());
+      if (stderrBuffer.trim()) onLine(stderrBuffer.trim());
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(stderr.trim() || output.trim() || `yt-dlp exited with code ${code}`));
+      }
+    });
+  });
 }
 
 async function findDownloadedFile(directory: string) {
@@ -259,6 +363,11 @@ export function refreshDownloadStatus(videoId: string) {
       file_path: null,
       file_size_bytes: null,
       mime_type: null,
+      progress_percent: null,
+      downloaded_bytes: null,
+      total_bytes: null,
+      speed_bytes_per_second: null,
+      eta_seconds: null,
       error: "Downloaded file is missing from disk."
     });
     return getVideoDownload(videoId)!;
@@ -271,6 +380,11 @@ export function refreshDownloadStatus(videoId: string) {
       file_path: null,
       file_size_bytes: null,
       mime_type: null,
+      progress_percent: null,
+      downloaded_bytes: null,
+      total_bytes: null,
+      speed_bytes_per_second: null,
+      eta_seconds: null,
       error: "Downloaded path is not a file."
     });
     return getVideoDownload(videoId)!;
@@ -297,6 +411,11 @@ export function startVideoDownload(videoId: string) {
 
   setDownload(videoId, {
     status: "queued",
+    progress_percent: 0,
+    downloaded_bytes: null,
+    total_bytes: null,
+    speed_bytes_per_second: null,
+    eta_seconds: null,
     error: null
   });
 
@@ -329,6 +448,11 @@ export async function deleteVideoDownload(videoId: string) {
     file_path: null,
     file_size_bytes: null,
     mime_type: null,
+    progress_percent: null,
+    downloaded_bytes: null,
+    total_bytes: null,
+    speed_bytes_per_second: null,
+    eta_seconds: null,
     error: null
   });
 
@@ -352,12 +476,17 @@ async function runVideoDownload(videoId: string) {
       file_path: null,
       file_size_bytes: null,
       mime_type: null,
+      progress_percent: 0,
+      downloaded_bytes: null,
+      total_bytes: null,
+      speed_bytes_per_second: null,
+      eta_seconds: null,
       error: null
     });
 
-    await execFileAsync(
-      "yt-dlp",
+    await runYtDlp(
       [
+        "--newline",
         "--no-playlist",
         "--restrict-filenames",
         "--windows-filenames",
@@ -365,11 +494,16 @@ async function runVideoDownload(videoId: string) {
         preferredDownloadFormat,
         "--merge-output-format",
         "mp4",
+        "--progress-template",
+        "download:curatube-progress:%(progress._percent_str)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.speed)s|%(progress.eta)s",
         "-o",
         path.join(downloadDirectory, "%(title).180B [%(id)s].%(ext)s"),
         videoUrl(video.youtube_id)
       ],
-      { maxBuffer: 16 * 1024 * 1024 }
+      (line) => {
+        const progress = parseDownloadProgress(line);
+        if (progress) setDownload(videoId, progress);
+      }
     );
 
     const downloadedFile = await findDownloadedFile(downloadDirectory);
@@ -385,6 +519,11 @@ async function runVideoDownload(videoId: string) {
       file_path: playableFilePath,
       file_size_bytes: playableStats.size,
       mime_type: mimeTypeFor(playableFilePath),
+      progress_percent: 100,
+      downloaded_bytes: playableStats.size,
+      total_bytes: playableStats.size,
+      speed_bytes_per_second: null,
+      eta_seconds: null,
       error: null
     });
   } catch (error) {
@@ -392,6 +531,11 @@ async function runVideoDownload(videoId: string) {
       status: "failed",
       file_path: null,
       file_size_bytes: null,
+      progress_percent: null,
+      downloaded_bytes: null,
+      total_bytes: null,
+      speed_bytes_per_second: null,
+      eta_seconds: null,
       mime_type: null,
       error: error instanceof Error ? error.message : "Download failed."
     });

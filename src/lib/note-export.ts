@@ -6,6 +6,10 @@ type VideoNote = {
 };
 
 function videoUrl(video: Video) {
+  if (video.playlist_id === video.youtube_id) {
+    return `https://www.youtube.com/watch?v=${video.youtube_id}`;
+  }
+
   return `https://www.youtube.com/watch?v=${video.youtube_id}&list=${video.playlist_id}`;
 }
 

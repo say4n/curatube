@@ -41,6 +41,7 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
       import_status TEXT NOT NULL DEFAULT 'ready',
       import_error TEXT,
       archived_at TEXT,
+      deleted_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -93,6 +94,11 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
       file_path TEXT,
       file_size_bytes INTEGER,
       mime_type TEXT,
+      progress_percent REAL,
+      downloaded_bytes INTEGER,
+      total_bytes INTEGER,
+      speed_bytes_per_second REAL,
+      eta_seconds INTEGER,
       error TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -105,6 +111,13 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
       completed INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS video_preferences (
+      video_id TEXT PRIMARY KEY REFERENCES videos(id) ON DELETE CASCADE,
+      prefer_local_playback INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   const playlistColumns = db.prepare(`PRAGMA table_info(playlists)`).all() as Array<{
@@ -112,6 +125,38 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
   }>;
   if (!playlistColumns.some((column) => column.name === "archived_at")) {
     db.exec(`ALTER TABLE playlists ADD COLUMN archived_at TEXT`);
+  }
+  if (!playlistColumns.some((column) => column.name === "deleted_at")) {
+    db.exec(`ALTER TABLE playlists ADD COLUMN deleted_at TEXT`);
+  }
+
+  const videoDownloadColumns = db.prepare(`PRAGMA table_info(video_downloads)`).all() as Array<{
+    name: string;
+  }>;
+  const videoDownloadMigrations = [
+    ["progress_percent", "REAL"],
+    ["downloaded_bytes", "INTEGER"],
+    ["total_bytes", "INTEGER"],
+    ["speed_bytes_per_second", "REAL"],
+    ["eta_seconds", "INTEGER"]
+  ];
+  for (const [name, type] of videoDownloadMigrations) {
+    if (!videoDownloadColumns.some((column) => column.name === name)) {
+      db.exec(`ALTER TABLE video_downloads ADD COLUMN ${name} ${type}`);
+    }
+  }
+
+  const videoProgressColumns = db.prepare(`PRAGMA table_info(video_progress)`).all() as Array<{
+    name: string;
+  }>;
+  if (videoProgressColumns.some((column) => column.name === "prefer_local_playback")) {
+    db.exec(`
+      INSERT OR IGNORE INTO video_preferences
+        (video_id, prefer_local_playback, created_at, updated_at)
+      SELECT video_id, prefer_local_playback, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      FROM video_progress
+      WHERE prefer_local_playback = 1
+    `);
   }
 }
 
@@ -126,6 +171,7 @@ export type Playlist = {
   import_status: string;
   import_error: string | null;
   archived_at: string | null;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
   last_watched_at: string | null;
@@ -169,6 +215,11 @@ export type VideoDownload = {
   file_path: string | null;
   file_size_bytes: number | null;
   mime_type: string | null;
+  progress_percent: number | null;
+  downloaded_bytes: number | null;
+  total_bytes: number | null;
+  speed_bytes_per_second: number | null;
+  eta_seconds: number | null;
   error: string | null;
   created_at: string;
   updated_at: string;
@@ -181,6 +232,28 @@ export type VideoProgress = {
   completed: number;
   updated_at: string;
 };
+
+export type VideoPreference = {
+  video_id: string;
+  prefer_local_playback: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+function normalizeVideoPreference(
+  preference:
+    | (Omit<VideoPreference, "prefer_local_playback"> & {
+        prefer_local_playback?: number | boolean | null;
+      })
+    | undefined
+) {
+  if (!preference) return undefined;
+  return {
+    ...preference,
+    prefer_local_playback:
+      preference.prefer_local_playback === true || preference.prefer_local_playback === 1
+  } as VideoPreference;
+}
 
 let demoDataCache: any = null;
 function getDemoData() {
@@ -201,6 +274,7 @@ function getDemoData() {
       notes: [],
       video_downloads: [],
       video_progress: [],
+      video_preferences: [],
     };
   }
   return demoDataCache;
@@ -211,8 +285,9 @@ export function getPlaylists() {
     return (getDemoData().playlists || []).map((playlist: any) => ({
       completed_video_count: 0,
       archived_at: null,
+      deleted_at: null,
       ...playlist
-    })) as Playlist[];
+    })).filter((playlist: Playlist) => !playlist.deleted_at) as Playlist[];
   }
   return db
     .prepare(
@@ -232,6 +307,7 @@ export function getPlaylists() {
            WHERE v.playlist_id = p.id
          ) AS last_watched_at
        FROM playlists p
+       WHERE p.deleted_at IS NULL
        ORDER BY datetime(p.updated_at) DESC, p.title ASC`
     )
     .all() as Playlist[];
@@ -263,6 +339,7 @@ export function getPlaylist(id: string) {
       ? ({
           completed_video_count: 0,
           archived_at: null,
+          deleted_at: null,
           ...playlist
         } as Playlist)
       : undefined;
@@ -285,7 +362,8 @@ export function getPlaylist(id: string) {
            WHERE v.playlist_id = p.id
          ) AS last_watched_at
        FROM playlists p
-       WHERE p.id = ?`
+       WHERE p.id = ?
+         AND p.deleted_at IS NULL`
     )
     .get(id) as Playlist | undefined;
 }
@@ -309,6 +387,27 @@ export function setPlaylistArchived(playlistId: string, archived: boolean) {
   ).run(archived ? 1 : 0, playlistId);
 
   return getPlaylist(playlistId);
+}
+
+export function setPlaylistDeleted(playlistId: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    const playlist = (getDemoData().playlists || []).find((p: any) => p.id === playlistId);
+    if (!playlist) return undefined;
+
+    return {
+      ...playlist,
+      deleted_at: new Date().toISOString()
+    } as Playlist;
+  }
+
+  db.prepare(
+    `UPDATE playlists
+     SET deleted_at = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`
+  ).run(playlistId);
+
+  return db.prepare(`SELECT * FROM playlists WHERE id = ?`).get(playlistId) as Playlist | undefined;
 }
 
 export function getPlaylistVideos(playlistId: string) {
@@ -367,7 +466,9 @@ export function getVideoDownload(videoId: string) {
 
 export function getVideoProgress(videoId: string) {
   if (process.env.DEMO_MODE_ENABLED === "true") {
-    return (getDemoData().video_progress || []).find((p: any) => p.video_id === videoId) as VideoProgress | undefined;
+    return (getDemoData().video_progress || []).find((p: any) => p.video_id === videoId) as
+      | VideoProgress
+      | undefined;
   }
   return db
     .prepare(`SELECT * FROM video_progress WHERE video_id = ?`)
@@ -382,9 +483,8 @@ export function getPlaylistVideoProgress(playlistId: string) {
         .map((video: any) => video.id)
     );
 
-    return (getDemoData().video_progress || []).filter((progress: any) =>
-      videoIds.has(progress.video_id)
-    ) as VideoProgress[];
+    return (getDemoData().video_progress || [])
+      .filter((progress: any) => videoIds.has(progress.video_id)) as VideoProgress[];
   }
 
   return db
@@ -395,4 +495,44 @@ export function getPlaylistVideoProgress(playlistId: string) {
        WHERE v.playlist_id = ?`
     )
     .all(playlistId) as VideoProgress[];
+}
+
+export function getVideoPreference(videoId: string) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return normalizeVideoPreference(
+      (getDemoData().video_preferences || []).find((p: any) => p.video_id === videoId)
+    );
+  }
+  return normalizeVideoPreference(
+    db.prepare(`SELECT * FROM video_preferences WHERE video_id = ?`).get(videoId) as
+      | (Omit<VideoPreference, "prefer_local_playback"> & {
+          prefer_local_playback?: number | boolean | null;
+        })
+      | undefined
+  );
+}
+
+export function setVideoPreference(
+  videoId: string,
+  values: { prefer_local_playback: boolean }
+) {
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    return {
+      video_id: videoId,
+      prefer_local_playback: values.prefer_local_playback,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    } as VideoPreference;
+  }
+
+  db.prepare(
+    `INSERT INTO video_preferences
+      (video_id, prefer_local_playback, created_at, updated_at)
+     VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+     ON CONFLICT(video_id) DO UPDATE SET
+      prefer_local_playback = excluded.prefer_local_playback,
+      updated_at = excluded.updated_at`
+  ).run(videoId, values.prefer_local_playback ? 1 : 0);
+
+  return getVideoPreference(videoId);
 }

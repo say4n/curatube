@@ -10,9 +10,11 @@ const bodySchema = z.object({
   completed: z.boolean().optional()
 });
 
-const completionSchema = z.object({
-  completed: z.boolean()
-});
+const patchSchema = z
+  .object({
+    completed: z.boolean().optional()
+  })
+  .refine((value) => value.completed !== undefined);
 
 export async function GET(
   _request: Request,
@@ -45,12 +47,11 @@ export async function PUT(
   }
 
   const duration = parsed.data.duration_seconds ?? null;
-  const current = getVideoProgress(videoId);
   const completed =
     parsed.data.completed ??
     (duration !== null && duration > 0 && parsed.data.position_seconds / duration >= 0.95
       ? true
-      : current?.completed === 1);
+      : getVideoProgress(videoId)?.completed === 1);
 
   if (process.env.DEMO_MODE_ENABLED === "true") {
     return NextResponse.json({
@@ -73,7 +74,12 @@ export async function PUT(
       duration_seconds = excluded.duration_seconds,
       completed = excluded.completed,
       updated_at = excluded.updated_at`
-  ).run(videoId, parsed.data.position_seconds, duration, completed ? 1 : 0);
+  ).run(
+    videoId,
+    parsed.data.position_seconds,
+    duration,
+    completed ? 1 : 0
+  );
 
   return NextResponse.json({ progress: getVideoProgress(videoId) });
 }
@@ -89,9 +95,9 @@ export async function PATCH(
     return NextResponse.json({ error: "Video not found." }, { status: 404 });
   }
 
-  const parsed = completionSchema.safeParse(await request.json());
+  const parsed = patchSchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid completion payload." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid progress patch payload." }, { status: 400 });
   }
 
   const current = getVideoProgress(videoId);
@@ -102,7 +108,12 @@ export async function PATCH(
         video_id: videoId,
         position_seconds: current?.position_seconds ?? 0,
         duration_seconds: current?.duration_seconds ?? null,
-        completed: parsed.data.completed ? 1 : 0,
+        completed:
+          parsed.data.completed === undefined
+            ? current?.completed ?? 0
+            : parsed.data.completed
+              ? 1
+              : 0,
         updated_at: new Date().toISOString(),
       }
     });
@@ -119,7 +130,11 @@ export async function PATCH(
     videoId,
     current?.position_seconds ?? 0,
     current?.duration_seconds ?? null,
-    parsed.data.completed ? 1 : 0
+    parsed.data.completed === undefined
+      ? current?.completed ?? 0
+      : parsed.data.completed
+        ? 1
+        : 0
   );
 
   return NextResponse.json({ progress: getVideoProgress(videoId) });

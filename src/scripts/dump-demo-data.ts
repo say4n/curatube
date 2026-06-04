@@ -18,6 +18,7 @@ function dumpData() {
     notes: [] as any[],
     video_downloads: [] as any[],
     video_progress: [] as any[],
+    video_preferences: [] as any[],
   };
 
   for (const pid of PLAYLIST_IDS_TO_DUMP) {
@@ -58,6 +59,11 @@ function dumpData() {
       const progress = db.prepare(`SELECT * FROM video_progress WHERE video_id = ?`).get(v.id) as any;
       if (progress) {
         dump.video_progress.push(progress);
+      }
+
+      const preferences = db.prepare(`SELECT * FROM video_preferences WHERE video_id = ?`).get(v.id) as any;
+      if (preferences) {
+        dump.video_preferences.push(preferences);
       }
     }
   }

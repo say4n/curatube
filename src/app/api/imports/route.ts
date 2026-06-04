@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json());
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Enter a valid YouTube playlist URL." }, { status: 400 });
+    return NextResponse.json({ error: "Enter a valid YouTube playlist or video URL." }, { status: 400 });
   }
 
   const job = createImportJob(parsed.data.url);
@@ -20,4 +20,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ job });
 }
-
