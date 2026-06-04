@@ -199,7 +199,6 @@ export function LearningWorkspace({
   ]);
   const showDownloadPanel =
     downloadIsActive ||
-    downloadStatus?.status === "ready" ||
     downloadStatus?.status === "failed" ||
     Boolean(downloadStatus?.error);
   const activeTranscriptIndex = useMemo(() => {
