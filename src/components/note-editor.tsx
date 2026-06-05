@@ -88,7 +88,7 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
 
         <div className="min-h-0 flex-1 overflow-hidden">
           {preview ? (
-            <div className="prose-note h-full overflow-y-auto px-4 py-3 text-[#312c27]">
+            <div className="hover-scrollbar prose-note h-full overflow-y-auto px-4 py-3 text-[#312c27]">
               {body.trim() ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm, remarkMath]}
@@ -138,7 +138,7 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
               }}
               spellCheck
               placeholder={"Markdown notes...\n\nUse $x^2$ or $$\\int_0^1 x dx$$ for math.\nType 2:36 to create a clickable timestamp in preview."}
-              className="h-full min-h-0 w-full resize-none border-0 bg-[#fffdf8] px-4 py-3 font-mono text-sm leading-6 text-ink outline-none placeholder:text-[#8a8175]"
+              className="hover-scrollbar h-full min-h-0 w-full resize-none border-0 bg-[#fffdf8] px-4 py-3 font-mono text-sm leading-6 text-ink outline-none placeholder:text-[#8a8175]"
             />
           )}
         </div>

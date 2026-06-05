@@ -34,6 +34,36 @@ iframe {
   border: 0;
 }
 
+.hover-scrollbar {
+  scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
+}
+
+.hover-scrollbar:hover,
+.hover-scrollbar:focus,
+.hover-scrollbar:focus-within {
+  scrollbar-color: #c9c0b2 transparent;
+}
+
+.hover-scrollbar::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  background-clip: padding-box;
+}
+
+.hover-scrollbar:hover::-webkit-scrollbar-thumb,
+.hover-scrollbar:focus::-webkit-scrollbar-thumb,
+.hover-scrollbar:focus-within::-webkit-scrollbar-thumb {
+  background: #c9c0b2;
+  background-clip: padding-box;
+}
+
+.hover-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #8a8175;
+  background-clip: padding-box;
+}
+
 .prose-note {
   font-size: 0.92rem;
   line-height: 1.65;

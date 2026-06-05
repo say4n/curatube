@@ -673,7 +673,7 @@ export function LearningWorkspace({
           courseListOpen ? "block" : "hidden"
         }`}
       >
-        <div className="max-h-[42vh] overflow-y-auto p-3 lg:sticky lg:top-0 lg:max-h-[calc(100vh-65px)]">
+        <div className="hover-scrollbar max-h-[42vh] overflow-y-auto p-3 lg:sticky lg:top-0 lg:max-h-[calc(100vh-65px)]">
           <div className="mb-3 flex items-center justify-between gap-2 px-2">
             <div className="text-xs font-bold uppercase tracking-[0.14em] text-rust">
               Course videos
@@ -770,7 +770,7 @@ export function LearningWorkspace({
                 : undefined
             }
           >
-            <div className="min-w-0 p-3 sm:p-4 md:p-6">
+            <div className="hover-scrollbar min-w-0 p-3 sm:p-4 md:p-6 xl:min-h-0 xl:overflow-y-auto">
               {!courseListOpen ? (
                 <div className="mb-3">
                   <button
@@ -1019,6 +1019,63 @@ export function LearningWorkspace({
                   </button>
                 </div>
               </div>
+
+              <div className="mt-4 overflow-hidden rounded-xl border border-[#d8d1c3] bg-[#fffdf8] p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-black text-ink">Transcript</h2>
+                  <span className="text-sm font-semibold text-[#6c6257]">
+                    {transcriptSegments.length} segments
+                  </span>
+                </div>
+
+                {transcriptSegments.length === 0 ? (
+                  <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-[#c9c0b2] bg-paper px-4 text-center text-sm font-semibold text-[#6c6257]">
+                    <span>No English transcript is stored for this video yet.</span>
+                    <button
+                      type="button"
+                      onClick={refreshTranscript}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-moss"
+                    >
+                      {transcriptBusy ? (
+                        <Loader2 className="animate-spin" size={15} />
+                      ) : (
+                        <RefreshCw size={15} />
+                      )}
+                      Fetch transcript
+                    </button>
+                  </div>
+                ) : (
+                  <div className="overflow-hidden rounded-lg border border-[#d8d1c3] bg-white">
+                    <div
+                      ref={transcriptListRef}
+                      className="hover-scrollbar max-h-[52vh] overflow-y-auto md:max-h-[38vh] xl:max-h-[360px]"
+                    >
+                      {transcriptSegments.map((segment, index) => (
+                        <button
+                          key={segment.id}
+                          ref={(element) => {
+                            if (element) {
+                              transcriptItemRefs.current.set(segment.id, element);
+                            } else {
+                              transcriptItemRefs.current.delete(segment.id);
+                            }
+                          }}
+                          type="button"
+                          onClick={() => seekTo(segment.start_seconds)}
+                          className={`grid w-full grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-[#eee9de] px-3 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud sm:grid-cols-[72px_minmax(0,1fr)] sm:px-4 ${
+                            index === activeTranscriptIndex ? "bg-cloud" : ""
+                          }`}
+                        >
+                          <span className="font-mono font-bold text-rust">
+                            {formatTimestamp(segment.start_seconds)}
+                          </span>
+                          <span className="leading-relaxed text-[#312c27]">{segment.text}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {notesOpen ? (
@@ -1037,62 +1094,6 @@ export function LearningWorkspace({
             ) : null}
           </div>
 
-          <div className="shrink-0 border-t border-[#d8d1c3] bg-[#fffdf8]">
-            <div className="px-4 py-4 md:px-6">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="text-lg font-black text-ink">Transcript</h2>
-                <span className="text-sm font-semibold text-[#6c6257]">
-                  {transcriptSegments.length} segments
-                </span>
-              </div>
-
-              {transcriptSegments.length === 0 ? (
-                <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-[#c9c0b2] bg-paper px-4 text-center text-sm font-semibold text-[#6c6257]">
-                  <span>No English transcript is stored for this video yet.</span>
-                  <button
-                    type="button"
-                    onClick={refreshTranscript}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-moss"
-                  >
-                    {transcriptBusy ? (
-                      <Loader2 className="animate-spin" size={15} />
-                    ) : (
-                      <RefreshCw size={15} />
-                    )}
-                    Fetch transcript
-                  </button>
-                </div>
-              ) : (
-                <div
-                  ref={transcriptListRef}
-                  className="max-h-[52vh] overflow-y-auto rounded-md border border-[#d8d1c3] bg-white md:max-h-[38vh]"
-                >
-                  {transcriptSegments.map((segment, index) => (
-                    <button
-                      key={segment.id}
-                      ref={(element) => {
-                        if (element) {
-                          transcriptItemRefs.current.set(segment.id, element);
-                        } else {
-                          transcriptItemRefs.current.delete(segment.id);
-                        }
-                      }}
-                      type="button"
-                      onClick={() => seekTo(segment.start_seconds)}
-                      className={`grid w-full grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-[#eee9de] px-3 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud sm:grid-cols-[72px_minmax(0,1fr)] sm:px-4 ${
-                        index === activeTranscriptIndex ? "bg-cloud" : ""
-                      }`}
-                    >
-                      <span className="font-mono font-bold text-rust">
-                        {formatTimestamp(segment.start_seconds)}
-                      </span>
-                      <span className="leading-relaxed text-[#312c27]">{segment.text}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </section>
     </div>
