@@ -759,9 +759,9 @@ export function LearningWorkspace({
       </aside>
 
       <section className="min-w-0">
-        <div className="flex min-h-[calc(100vh-65px)] flex-col">
+        <div className="flex min-h-[calc(100vh-65px)] flex-col xl:h-[calc(100vh-65px)] xl:min-h-0">
           <div
-            className={`grid min-h-0 min-w-0 flex-1 gap-0 ${
+            className={`grid min-h-0 min-w-0 flex-1 gap-0 xl:overflow-hidden ${
               notesOpen ? "xl:grid-cols-[minmax(0,1fr)_var(--notes-width)]" : ""
             }`}
             style={

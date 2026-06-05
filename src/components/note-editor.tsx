@@ -59,8 +59,8 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
   const renderedBody = useMemo(() => linkifyTimestamps(body), [body]);
 
   return (
-    <aside className="h-full border-t border-[#d8d1c3] bg-[#fffdf8] xl:border-l xl:border-t-0">
-      <div className="flex h-full min-h-[320px] flex-col sm:min-h-[380px]">
+    <aside className="h-full min-h-0 border-t border-[#d8d1c3] bg-[#fffdf8] xl:border-l xl:border-t-0">
+      <div className="flex h-full min-h-[320px] flex-col sm:min-h-[380px] xl:min-h-0">
         <div className="flex items-center justify-between gap-3 border-b border-[#d8d1c3] px-4 py-3">
           <h2 className="text-base font-black text-ink">Notes</h2>
           <div className="flex items-center gap-2">
@@ -86,60 +86,62 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
           </div>
         </div>
 
-        {preview ? (
-          <div className="prose-note min-h-0 flex-1 overflow-y-auto px-4 py-3 text-[#312c27]">
-            {body.trim() ? (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeKatex]}
-                components={{
-                  a({ href, children }) {
-                    if (href?.startsWith("curatube-seek:")) {
-                      const seconds = Number.parseInt(href.replace("curatube-seek:", ""), 10);
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {preview ? (
+            <div className="prose-note h-full overflow-y-auto px-4 py-3 text-[#312c27]">
+              {body.trim() ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                  components={{
+                    a({ href, children }) {
+                      if (href?.startsWith("curatube-seek:")) {
+                        const seconds = Number.parseInt(href.replace("curatube-seek:", ""), 10);
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => onSeek(seconds)}
+                            className="rounded bg-cloud px-1.5 py-0.5 font-mono text-sm font-bold text-rust underline-offset-2 hover:underline"
+                          >
+                            {children}
+                          </button>
+                        );
+                      }
+
                       return (
-                        <button
-                          type="button"
-                          onClick={() => onSeek(seconds)}
-                          className="rounded bg-cloud px-1.5 py-0.5 font-mono text-sm font-bold text-rust underline-offset-2 hover:underline"
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-semibold text-moss underline underline-offset-2"
                         >
                           {children}
-                        </button>
+                        </a>
                       );
                     }
-
-                    return (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-semibold text-moss underline underline-offset-2"
-                      >
-                        {children}
-                      </a>
-                    );
-                  }
-                }}
-              >
-                {renderedBody}
-              </ReactMarkdown>
-            ) : (
-              <p className="text-sm font-semibold text-[#6c6257]">
-                Write Markdown notes with math like $E = mc^2$ and timestamps like 2:36.
-              </p>
-            )}
-          </div>
-        ) : (
-          <textarea
-            value={body}
-            onChange={(event) => {
-              setBody(event.target.value);
-              setSaved(false);
-            }}
-            spellCheck
-            placeholder={"Markdown notes...\n\nUse $x^2$ or $$\\int_0^1 x dx$$ for math.\nType 2:36 to create a clickable timestamp in preview."}
-            className="min-h-0 flex-1 resize-none border-0 bg-[#fffdf8] px-4 py-3 font-mono text-sm leading-6 text-ink outline-none placeholder:text-[#8a8175]"
-          />
-        )}
+                  }}
+                >
+                  {renderedBody}
+                </ReactMarkdown>
+              ) : (
+                <p className="text-sm font-semibold text-[#6c6257]">
+                  Write Markdown notes with math like $E = mc^2$ and timestamps like 2:36.
+                </p>
+              )}
+            </div>
+          ) : (
+            <textarea
+              value={body}
+              onChange={(event) => {
+                setBody(event.target.value);
+                setSaved(false);
+              }}
+              spellCheck
+              placeholder={"Markdown notes...\n\nUse $x^2$ or $$\\int_0^1 x dx$$ for math.\nType 2:36 to create a clickable timestamp in preview."}
+              className="h-full min-h-0 w-full resize-none border-0 bg-[#fffdf8] px-4 py-3 font-mono text-sm leading-6 text-ink outline-none placeholder:text-[#8a8175]"
+            />
+          )}
+        </div>
       </div>
     </aside>
   );
