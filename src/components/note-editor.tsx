@@ -70,7 +70,7 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
             <button
               type="button"
               onClick={() => setPreview((value) => !value)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
               aria-label={preview ? "Edit note" : "Preview note"}
             >
               {preview ? <Pencil size={17} /> : <Eye size={17} />}
@@ -78,7 +78,7 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
             <button
               type="button"
               onClick={() => setSaved(false)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-ink text-white transition hover:bg-moss"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-ink text-white transition hover:bg-moss sm:h-9 sm:w-9"
               aria-label="Save note"
             >
               <Save size={17} />
@@ -88,7 +88,7 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
 
         <div className="min-h-0 flex-1 overflow-hidden">
           {preview ? (
-            <div className="hover-scrollbar prose-note h-full overflow-y-auto px-4 py-3 text-[#312c27]">
+            <div className="hover-scrollbar prose-note h-full overflow-auto px-4 py-3 text-[#312c27]">
               {body.trim() ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm, remarkMath]}
@@ -138,7 +138,7 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
               }}
               spellCheck
               placeholder={"Markdown notes...\n\nUse $x^2$ or $$\\int_0^1 x dx$$ for math.\nType 2:36 to create a clickable timestamp in preview."}
-              className="hover-scrollbar h-full min-h-0 w-full resize-none border-0 bg-[#fffdf8] px-4 py-3 font-mono text-sm leading-6 text-ink outline-none placeholder:text-[#8a8175]"
+              className="hover-scrollbar h-full min-h-0 w-full resize-none border-0 bg-[#fffdf8] px-4 py-3 font-mono text-base leading-6 text-ink outline-none placeholder:text-[#8a8175] sm:text-sm"
             />
           )}
         </div>

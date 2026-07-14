@@ -350,14 +350,14 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                   key={job.id}
                   className="flex flex-col gap-2 rounded-md border border-[#d8d1c3] bg-paper px-4 py-3 text-sm md:flex-row md:items-center"
                 >
-                  <div className="flex flex-1 items-center gap-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                     {job.status === "running" || job.status === "queued" ? (
                       <Loader2 className="animate-spin text-moss" size={17} />
                     ) : (
                       <Clock className="text-rust" size={17} />
                     )}
                     <span className="font-semibold capitalize">{job.status}</span>
-                    <span className="truncate text-[#6c6257]">{job.message ?? job.source_url}</span>
+                    <span className="min-w-0 truncate text-[#6c6257]">{job.message ?? job.source_url}</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-cloud md:w-40">
                     <div
@@ -407,7 +407,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                   onClick={() => setPlaylistSearch("")}
                   aria-label="Clear playlist search"
                   title="Clear search"
-                  className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-[#6c6257] transition hover:bg-cloud hover:text-ink"
+                  className="absolute right-0 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-[#6c6257] transition hover:bg-cloud hover:text-ink sm:right-2 sm:h-8 sm:w-8"
                 >
                   <X size={16} />
                 </button>
@@ -603,7 +603,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                         }}
                         aria-label={archived ? `Unarchive ${playlist.title}` : `Archive ${playlist.title}`}
                         title={archived ? "Unarchive playlist" : "Archive playlist"}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
                       >
                         {archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                       </button>
@@ -612,7 +612,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                         href={`/playlists/${playlist.id}`}
                         aria-label={`Open ${playlist.title}`}
                         title="Open course"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-ink text-white transition hover:bg-moss"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-ink text-white transition hover:bg-moss sm:h-9 sm:w-9"
                       >
                         <ArrowRight
                           size={17}

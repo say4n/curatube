@@ -20,7 +20,26 @@ export function ExportNotesButtons({ playlistId, playlistTitle }: Props) {
       const response = await fetch(exportUrl);
       if (!response.ok) throw new Error("Failed to fetch notes");
       const text = await response.text();
-      await navigator.clipboard.writeText(text);
+      let copiedWithClipboard = false;
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          copiedWithClipboard = true;
+        } catch {
+          // Safari can expose the API but reject it outside a secure context.
+        }
+      }
+      if (!copiedWithClipboard) {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand("copy");
+        textarea.remove();
+        if (!copied) throw new Error("Clipboard copy is unavailable");
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
@@ -39,7 +58,7 @@ export function ExportNotesButtons({ playlistId, playlistTitle }: Props) {
         disabled={copying}
         aria-label={playlistTitle ? `Copy notes for ${playlistTitle}` : "Copy notes to clipboard"}
         title="Copy notes to clipboard"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60 sm:h-9 sm:w-9"
       >
         {copied ? (
           <Check size={16} className="text-moss" />
@@ -54,7 +73,7 @@ export function ExportNotesButtons({ playlistId, playlistTitle }: Props) {
         download
         aria-label={playlistTitle ? `Download notes for ${playlistTitle}` : "Download notes"}
         title="Download notes"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
       >
         <Download size={16} />
       </a>

@@ -14,6 +14,7 @@
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background:
     linear-gradient(180deg, rgba(247, 244, 239, 0.92), rgba(247, 244, 239, 1)),
@@ -32,6 +33,61 @@ textarea {
 
 iframe {
   border: 0;
+}
+
+.workspace-viewport {
+  min-height: calc(100vh - 65px);
+}
+
+.course-list-scroll {
+  max-height: 42vh;
+}
+
+@supports (height: 100dvh) {
+  .workspace-viewport {
+    min-height: calc(100dvh - 65px);
+  }
+
+  .course-list-scroll {
+    max-height: 42dvh;
+  }
+}
+
+@media (min-width: 1024px) {
+  .course-list-viewport {
+    min-height: calc(100vh - 65px);
+  }
+
+  .course-list-scroll {
+    max-height: calc(100vh - 65px);
+  }
+}
+
+@media (min-width: 1024px) and (min-height: 1px) {
+  @supports (height: 100dvh) {
+    .course-list-viewport {
+      min-height: calc(100dvh - 65px);
+    }
+
+    .course-list-scroll {
+      max-height: calc(100dvh - 65px);
+    }
+  }
+}
+
+@media (min-width: 1280px) {
+  .workspace-viewport {
+    height: calc(100vh - 65px);
+    min-height: 0;
+  }
+}
+
+@media (min-width: 1280px) and (min-height: 1px) {
+  @supports (height: 100dvh) {
+    .workspace-viewport {
+      height: calc(100dvh - 65px);
+    }
+  }
 }
 
 .hover-scrollbar {
@@ -122,8 +178,28 @@ iframe {
 }
 
 .prose-note table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
   width: 100%;
   border-collapse: collapse;
+}
+
+.prose-note .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 .prose-note th,

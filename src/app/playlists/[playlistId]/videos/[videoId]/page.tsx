@@ -64,12 +64,12 @@ export default async function VideoPage({
     : null;
 
   return (
-    <main className="min-h-screen bg-[#f7f4ef]">
+    <main className="min-h-screen min-h-dvh bg-[#f7f4ef]">
       <div className="border-b border-[#d8d1c3] bg-[#fffdf8]/85 backdrop-blur">
-        <div className="flex w-full items-center gap-4 px-5 py-3">
+        <div className="flex w-full items-center gap-2 px-3 py-2 sm:gap-4 sm:px-5 sm:py-3">
           <Link
             href="/"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
             aria-label="Back to playlists"
           >
             <ArrowLeft size={18} />

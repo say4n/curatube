@@ -82,10 +82,26 @@ function loadYouTubeApi() {
   if (window.YT?.Player) return Promise.resolve();
   if (youtubeApiPromise) return youtubeApiPromise;
 
-  youtubeApiPromise = new Promise((resolve) => {
-    window.onYouTubeIframeAPIReady = () => resolve();
+  youtubeApiPromise = new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const timeout = window.setTimeout(() => finish(new Error("YouTube player timed out")), 10000);
+
+    function finish(error?: Error) {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      if (error) {
+        youtubeApiPromise = null;
+        reject(error);
+      } else {
+        resolve();
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = () => finish();
     const script = document.createElement("script");
     script.src = "https://www.youtube.com/iframe_api";
+    script.onerror = () => finish(new Error("YouTube player failed to load"));
     document.head.appendChild(script);
   });
 
@@ -134,7 +150,7 @@ export function LearningWorkspace({
   initialYoutubeEmbedBlocked,
   initialDownloadStatus
 }: Props) {
-  const [notesOpen, setNotesOpen] = useState(true);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [notesWidth, setNotesWidth] = useState(420);
   const [courseListOpen, setCourseListOpen] = useState(false);
   const [transcriptSegments, setTranscriptSegments] = useState(transcript);
@@ -164,6 +180,8 @@ export function LearningWorkspace({
   const youtubeHostRef = useRef<HTMLDivElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const isUnloadingRef = useRef(false);
+  const lastLocalProgressBucketRef = useRef(-1);
+  const playbackTimeRef = useRef(initialProgressSeconds);
   const transcriptListRef = useRef<HTMLDivElement | null>(null);
   const transcriptItemRefs = useRef(new Map<number, HTMLButtonElement>());
   const playerElementId = useMemo(() => `youtube-player-${video.youtube_id}`, [video.youtube_id]);
@@ -243,6 +261,8 @@ export function LearningWorkspace({
     setPreferLocalPlayback(initialPreferLocalPlayback);
     setPendingLocalSeek(null);
     setCurrentPlaybackTime(initialProgressSeconds);
+    playbackTimeRef.current = initialProgressSeconds;
+    lastLocalProgressBucketRef.current = -1;
     isUnloadingRef.current = false;
     // Server-provided playback state seeds the client only when navigating to a new video.
     // Local delete/download actions should not be overwritten by player mode changes.
@@ -250,6 +270,7 @@ export function LearningWorkspace({
 
   useEffect(() => {
     setCourseListOpen(window.matchMedia("(min-width: 1024px)").matches);
+    setNotesOpen(window.matchMedia("(min-width: 1280px)").matches);
   }, []);
 
   useEffect(() => {
@@ -264,7 +285,6 @@ export function LearningWorkspace({
     let revealTimer: number | null = null;
     setPlayerReady(false);
     setYoutubePlayerVisible(false);
-    setEmbedBlocked(initialYoutubeEmbedBlocked);
 
     if (!shouldUseYouTubePlayer || initialYoutubeEmbedBlocked) {
       setPlayerReady(true);
@@ -291,7 +311,7 @@ export function LearningWorkspace({
           modestbranding: 1,
           rel: 0,
           playsinline: 1,
-          ...(initialProgressSeconds > 5 ? { start: Math.floor(initialProgressSeconds) } : {})
+          ...(playbackTimeRef.current > 5 ? { start: Math.floor(playbackTimeRef.current) } : {})
         },
         events: {
           onReady: () => {
@@ -301,16 +321,15 @@ export function LearningWorkspace({
               setYoutubePlayerVisible(true);
             }, 400);
           },
-          onError: (event) => {
-            if (event.data === 101 || event.data === 150) {
-              if (revealTimer !== null) {
-                window.clearTimeout(revealTimer);
-                revealTimer = null;
-              }
-              setYoutubePlayerVisible(false);
-              setEmbedBlocked(true);
-              void saveYoutubeEmbedBlocked();
+          onError: () => {
+            if (revealTimer !== null) {
+              window.clearTimeout(revealTimer);
+              revealTimer = null;
             }
+            setPlayerReady(true);
+            setYoutubePlayerVisible(false);
+            setEmbedBlocked(true);
+            void saveYoutubeEmbedBlocked();
           },
           onStateChange: (event) => {
             if (event.data === 0) {
@@ -320,6 +339,12 @@ export function LearningWorkspace({
           }
         }
       });
+    }).catch(() => {
+      if (cancelled) return;
+      setPlayerReady(true);
+      setYoutubePlayerVisible(false);
+      setEmbedBlocked(true);
+      void saveYoutubeEmbedBlocked();
     });
 
     return () => {
@@ -350,6 +375,7 @@ export function LearningWorkspace({
     const interval = window.setInterval(() => {
       const currentTime = playerRef.current?.getCurrentTime?.();
       if (typeof currentTime === "number" && currentTime > 0) {
+        playbackTimeRef.current = currentTime;
         setCurrentPlaybackTime(currentTime);
         void saveProgress();
       }
@@ -364,6 +390,7 @@ export function LearningWorkspace({
     const interval = window.setInterval(() => {
       const currentTime = playerRef.current?.getCurrentTime?.();
       if (typeof currentTime === "number" && Number.isFinite(currentTime)) {
+        playbackTimeRef.current = currentTime;
         setCurrentPlaybackTime(currentTime);
       }
     }, 750);
@@ -439,21 +466,22 @@ export function LearningWorkspace({
     const element = localVideoRef.current;
     if (!element) return;
 
-    const playAfterSeek = () => {
-      element.removeEventListener("seeked", playAfterSeek);
-      void element.play().catch(() => {});
+    const seekAndPlay = () => {
+      const duration = Number.isFinite(element.duration) ? element.duration : seconds;
+      element.currentTime = Math.max(0, Math.min(seconds, duration));
+      playbackTimeRef.current = element.currentTime;
+      void element.play().catch(() => {
+        // Safari may require a fresh tap; native controls remain available.
+      });
     };
 
-    element.pause();
-    element.addEventListener("seeked", playAfterSeek, { once: true });
-    element.currentTime = seconds;
-    void element.play().catch(() => {});
-    window.setTimeout(() => {
-      element.removeEventListener("seeked", playAfterSeek);
-      if (Math.abs(element.currentTime - seconds) < 0.75) {
-        void element.play().catch(() => {});
-      }
-    }, 900);
+    if (element.readyState < HTMLMediaElement.HAVE_METADATA) {
+      element.addEventListener("loadedmetadata", seekAndPlay, { once: true });
+      element.load();
+      return;
+    }
+
+    seekAndPlay();
   }
 
   async function saveProgress(completed?: boolean, positionOverride?: number, durationOverride?: number | null) {
@@ -568,7 +596,15 @@ export function LearningWorkspace({
   async function togglePreferredPlayer() {
     if (!localVideoReady) return;
 
+    const activePosition = localVideoActive
+      ? localVideoRef.current?.currentTime
+      : playerRef.current?.getCurrentTime?.();
+    if (typeof activePosition === "number" && Number.isFinite(activePosition)) {
+      playbackTimeRef.current = activePosition;
+    }
+
     const nextPreferLocal = !localVideoActive;
+    if (nextPreferLocal) setPendingLocalSeek(playbackTimeRef.current);
     setPreferLocalPlayback(nextPreferLocal);
 
     const response = await fetch(`/api/videos/${encodedVideoId}/preferences`, {
@@ -669,11 +705,11 @@ export function LearningWorkspace({
       }`}
     >
       <aside
-        className={`border-b border-[#d8d1c3] bg-[#fffdf8] lg:min-h-[calc(100vh-65px)] lg:border-b-0 lg:border-r ${
+        className={`course-list-viewport border-b border-[#d8d1c3] bg-[#fffdf8] lg:border-b-0 lg:border-r ${
           courseListOpen ? "block" : "hidden"
         }`}
       >
-        <div className="hover-scrollbar max-h-[42vh] overflow-y-auto p-3 lg:sticky lg:top-0 lg:max-h-[calc(100vh-65px)]">
+        <div className="course-list-scroll hover-scrollbar overflow-y-auto p-3 lg:sticky lg:top-0">
           <div className="mb-3 flex items-center justify-between gap-2 px-2">
             <div className="text-xs font-bold uppercase tracking-[0.14em] text-rust">
               Course videos
@@ -683,7 +719,7 @@ export function LearningWorkspace({
               onClick={() => setCourseListOpen(false)}
               aria-label="Collapse course videos"
               title="Collapse course videos"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#d8d1c3] bg-white text-ink transition hover:bg-cloud"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#d8d1c3] bg-white text-ink transition hover:bg-cloud sm:h-8 sm:w-8"
             >
               <PanelLeftClose size={16} />
             </button>
@@ -695,7 +731,7 @@ export function LearningWorkspace({
               return (
                 <div
                   key={item.id}
-                  className={`grid grid-cols-[64px_minmax(0,1fr)_32px] items-center gap-2 rounded-md p-1.5 text-sm transition ${
+                  className={`grid grid-cols-[64px_minmax(0,1fr)_44px] items-center gap-2 rounded-md p-1.5 text-sm transition sm:grid-cols-[64px_minmax(0,1fr)_32px] ${
                     item.id === video.id
                       ? "bg-ink text-white"
                       : "text-[#413a33] hover:bg-cloud"
@@ -741,7 +777,7 @@ export function LearningWorkspace({
                     aria-pressed={completed}
                     aria-label={completed ? "Mark video incomplete" : "Mark video complete"}
                     title={completed ? "Mark incomplete" : "Mark complete"}
-                    className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition ${
+                    className={`inline-flex h-11 w-11 items-center justify-center rounded-md transition sm:h-8 sm:w-8 ${
                       item.id === video.id
                         ? "bg-white/10 text-white hover:bg-white/20"
                         : completed
@@ -759,10 +795,10 @@ export function LearningWorkspace({
       </aside>
 
       <section className="min-w-0">
-        <div className="flex min-h-[calc(100vh-65px)] flex-col xl:h-[calc(100vh-65px)] xl:min-h-0">
+        <div className="workspace-viewport flex flex-col">
           <div
             className={`grid min-h-0 min-w-0 flex-1 gap-0 xl:overflow-hidden ${
-              notesOpen ? "xl:grid-cols-[minmax(0,1fr)_var(--notes-width)]" : ""
+              notesOpen ? "xl:grid-cols-[minmax(0,1fr)_min(var(--notes-width),45vw)]" : ""
             }`}
             style={
               notesOpen
@@ -776,7 +812,7 @@ export function LearningWorkspace({
                   <button
                     type="button"
                     onClick={() => setCourseListOpen(true)}
-                    className="inline-flex h-9 items-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-sm font-bold text-ink transition hover:bg-cloud"
+                    className="inline-flex h-11 items-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-sm font-bold text-ink transition hover:bg-cloud sm:h-9"
                   >
                     <PanelLeftOpen size={17} />
                     Course videos
@@ -803,19 +839,23 @@ export function LearningWorkspace({
                       className="absolute inset-0 h-full w-full"
                       controls
                       playsInline
-                      preload="auto"
+                      preload="metadata"
                       onError={() => {
                         void refreshDownloadStatus();
                       }}
                       onLoadedMetadata={(event) => {
-                        if (initialProgressSeconds > 5) {
-                          event.currentTarget.currentTime = initialProgressSeconds;
+                        if (playbackTimeRef.current > 5) {
+                          event.currentTarget.currentTime = Math.min(
+                            playbackTimeRef.current,
+                            event.currentTarget.duration
+                          );
                         }
                       }}
                       onTimeUpdate={(event) => {
                         if (isUnloadingRef.current) return;
                         const currentTime = event.currentTarget.currentTime;
                         const duration = event.currentTarget.duration;
+                        playbackTimeRef.current = currentTime;
                         setCurrentPlaybackTime(currentTime);
                         if (
                           !videoCompletion[video.id] &&
@@ -826,7 +866,9 @@ export function LearningWorkspace({
                           setVideoCompletion((current) => ({ ...current, [video.id]: true }));
                           void saveProgress(undefined, currentTime, duration);
                         }
-                        if (Math.floor(currentTime) % 5 === 0) {
+                        const progressBucket = Math.floor(currentTime / 5);
+                        if (progressBucket !== lastLocalProgressBucketRef.current) {
+                          lastLocalProgressBucketRef.current = progressBucket;
                           void saveProgress(undefined, currentTime, duration);
                         }
                       }}
@@ -841,11 +883,11 @@ export function LearningWorkspace({
                   ) : null}
                 </div>
                 {embedBlocked && !localVideoActive ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-[#171717]/95 px-5 text-center text-white">
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#171717]/95 px-3 text-center text-white sm:px-5">
                     <div className="max-w-lg">
-                      <Download className="mx-auto mb-4 text-white/85" size={34} />
-                      <p className="text-lg font-black">YouTube blocked embedded playback.</p>
-                      <p className="mt-2 text-sm leading-6 text-white/75">
+                      <Download className="mx-auto mb-2 hidden text-white/85 sm:block" size={34} />
+                      <p className="text-sm font-black sm:text-lg">YouTube blocked embedded playback.</p>
+                      <p className="mt-1 text-xs leading-5 text-white/75 sm:mt-2 sm:text-sm sm:leading-6">
                         Use the controls below the player to download a local copy with yt-dlp or
                         open the lesson on YouTube.
                       </p>
@@ -950,7 +992,7 @@ export function LearningWorkspace({
                     <button
                       type="button"
                       onClick={startDownload}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-[#2d2924]"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-[#2d2924] sm:h-9"
                     >
                       {downloadBusy ? (
                         <Loader2 className="animate-spin" size={15} />
@@ -964,7 +1006,7 @@ export function LearningWorkspace({
                     <button
                       type="button"
                       onClick={togglePreferredPlayer}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-xs font-bold text-ink transition hover:bg-cloud"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-xs font-bold text-ink transition hover:bg-cloud sm:h-9"
                     >
                       {localVideoActive ? <ExternalLink size={15} /> : <Download size={15} />}
                       {localVideoActive ? "Use YouTube" : "Use local"}
@@ -975,7 +1017,7 @@ export function LearningWorkspace({
                         onClick={refreshDownloadStatus}
                         aria-label="Refresh download status"
                         title="Refresh download status"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
                       >
                         {downloadBusy ? (
                           <Loader2 className="animate-spin" size={15} />
@@ -989,7 +1031,7 @@ export function LearningWorkspace({
                           onClick={deleteDownload}
                           aria-label="Delete downloaded video"
                           title="Delete downloaded video"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-rust text-white transition hover:bg-rust/85"
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-rust text-white transition hover:bg-rust/85 sm:h-9 sm:w-9"
                         >
                           {downloadBusy ? (
                             <Loader2 className="animate-spin" size={15} />
@@ -1004,14 +1046,15 @@ export function LearningWorkspace({
                         rel="noreferrer"
                         aria-label="Open on YouTube"
                         title="Open on YouTube"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
                       >
                         <ExternalLink size={15} />
                       </a>
                   <button
                     type="button"
                     onClick={() => setNotesOpen((open) => !open)}
-                    className="inline-flex h-9 items-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-sm font-bold text-ink transition hover:bg-cloud"
+                    aria-expanded={notesOpen}
+                    className="inline-flex h-11 items-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-sm font-bold text-ink transition hover:bg-cloud sm:h-9"
                   >
                     <FileText size={17} />
                     Notes
@@ -1020,7 +1063,7 @@ export function LearningWorkspace({
                 </div>
               </div>
 
-              <div className="mt-4 overflow-hidden rounded-xl border border-[#d8d1c3] bg-[#fffdf8] p-4">
+              <div className={`mt-4 overflow-hidden rounded-xl border border-[#d8d1c3] bg-[#fffdf8] p-4 ${notesOpen ? "hidden xl:block" : ""}`}>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h2 className="text-lg font-black text-ink">Transcript</h2>
                   <span className="text-sm font-semibold text-[#6c6257]">
@@ -1034,7 +1077,7 @@ export function LearningWorkspace({
                     <button
                       type="button"
                       onClick={refreshTranscript}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-moss"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-moss sm:h-10"
                     >
                       {transcriptBusy ? (
                         <Loader2 className="animate-spin" size={15} />
