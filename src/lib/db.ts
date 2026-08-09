@@ -119,6 +119,13 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE INDEX IF NOT EXISTS idx_playlists_updated_at
+      ON playlists(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_videos_playlist_position
+      ON videos(playlist_id, position);
+    CREATE INDEX IF NOT EXISTS idx_import_jobs_status_created
+      ON import_jobs(status, created_at);
   `);
 
   const playlistColumns = db.prepare(`PRAGMA table_info(playlists)`).all() as Array<{
