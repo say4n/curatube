@@ -16,6 +16,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   RefreshCw,
+  Square,
   Trash2
 } from "lucide-react";
 import type { Playlist, TranscriptSegment, Video, VideoProgress } from "@/lib/db";
@@ -640,6 +641,20 @@ export function LearningWorkspace({
     }
   }
 
+  async function cancelDownload() {
+    setDownloadBusy(true);
+    try {
+      const response = await fetch(`/api/videos/${encodedVideoId}/download/cancel`, {
+        method: "POST"
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as { download: DownloadStatus };
+      setDownloadStatus(data.download);
+    } finally {
+      setDownloadBusy(false);
+    }
+  }
+
   async function deleteDownload() {
     const confirmed = window.confirm("Delete the downloaded video file from local storage?");
     if (!confirmed) return;
@@ -930,16 +945,30 @@ export function LearningWorkspace({
                               ? "Download failed"
                               : "Downloading video"}
                         </span>
-                        <span className="min-w-[86px] rounded-full bg-cloud px-2 py-0.5 text-center font-mono text-xs font-bold text-moss">
-                          {downloadStatus?.status === "ready"
-                            ? "Ready"
-                            : downloadStatus?.status === "failed"
-                              ? "Failed"
-                              : downloadIsFinalizing
-                                ? "Finalizing"
-                                : downloadProgressPercent !== null
-                                  ? `${downloadProgressPercent.toFixed(1)}%`
-                                  : "Starting"}
+                        <span className="flex items-center gap-2">
+                          <span className="min-w-[86px] rounded-full bg-cloud px-2 py-0.5 text-center font-mono text-xs font-bold text-moss">
+                            {downloadStatus?.status === "ready"
+                              ? "Ready"
+                              : downloadStatus?.status === "failed"
+                                ? "Failed"
+                                : downloadIsFinalizing
+                                  ? "Finalizing"
+                                  : downloadProgressPercent !== null
+                                    ? `${downloadProgressPercent.toFixed(1)}%`
+                                    : "Starting"}
+                          </span>
+                          {downloadIsActive ? (
+                            <button
+                              type="button"
+                              onClick={cancelDownload}
+                              aria-label="Cancel download"
+                              title="Cancel download"
+                              className="inline-flex h-7 items-center gap-1 rounded-md border border-[#c9c0b2] bg-white px-2 text-xs font-bold text-ink transition hover:bg-rust hover:text-white sm:h-6"
+                            >
+                              <Square size={11} className="fill-current" />
+                              Cancel
+                            </button>
+                          ) : null}
                         </span>
                       </div>
                       <div className="h-2.5 overflow-hidden rounded-full bg-[#e8e1d6]">

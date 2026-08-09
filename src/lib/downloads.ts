@@ -3,12 +3,14 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { db, getVideo, getVideoDownload, type VideoDownload } from "./db";
+import { db, getVideo, getVideoDownload, type Video, type VideoDownload } from "./db";
 import { mediaDir } from "./paths";
 
 const execFileAsync = promisify(execFile);
 const runningDownloads = new Set<string>();
 const runningPreparations = new Map<string, Promise<VideoDownload>>();
+const runningYtDlp = new Map<string, ReturnType<typeof spawn>>();
+const abortedDownloads = new Set<string>();
 const mediaRoot = mediaDir;
 const videoExtensions = new Set([".mp4", ".webm", ".mkv", ".mov"]);
 const preferredDownloadFormat =
@@ -137,11 +139,15 @@ function parseDownloadProgress(line: string) {
   };
 }
 
-async function runYtDlp(args: string[], onLine: (line: string) => void) {
+async function runYtDlp(videoId: string, args: string[], onLine: (line: string) => void) {
   await new Promise<void>((resolve, reject) => {
     const child = spawn("yt-dlp", args, {
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
+      // Own process group so cancellation can kill yt-dlp and its ffmpeg
+      // merge subprocess together.
+      detached: true
     });
+    runningYtDlp.set(videoId, child);
     let output = "";
     let stderr = "";
     let stdoutBuffer = "";
@@ -166,8 +172,12 @@ async function runYtDlp(args: string[], onLine: (line: string) => void) {
 
     child.stdout.on("data", (chunk: Buffer) => handleChunk(chunk, "stdout"));
     child.stderr.on("data", (chunk: Buffer) => handleChunk(chunk, "stderr"));
-    child.on("error", reject);
+    child.on("error", (error) => {
+      runningYtDlp.delete(videoId);
+      reject(error);
+    });
     child.on("close", (code) => {
+      runningYtDlp.delete(videoId);
       if (stdoutBuffer.trim()) onLine(stdoutBuffer.trim());
       if (stderrBuffer.trim()) onLine(stderrBuffer.trim());
       if (code === 0) {
@@ -349,10 +359,11 @@ export function startVideoDownload(videoId: string) {
   }
 
   const current = refreshDownloadStatus(videoId);
-  if (current.status === "ready" || current.status === "running") {
-    return current;
-  }
+  if (current.status === "ready") return current;
+  if (runningDownloads.has(videoId)) return getVideoDownload(videoId)!;
 
+  // A stale "queued"/"running" row can be left behind by a crashed process.
+  // Restart yt-dlp, which resumes any partial .part files still on disk.
   setDownload(videoId, {
     status: "queued",
     progress_percent: 0,
@@ -362,10 +373,6 @@ export function startVideoDownload(videoId: string) {
     eta_seconds: null,
     error: null
   });
-
-  if (runningDownloads.has(videoId)) {
-    return getVideoDownload(videoId)!;
-  }
 
   runningDownloads.add(videoId);
   void runVideoDownload(videoId).finally(() => {
@@ -403,6 +410,64 @@ export async function deleteVideoDownload(videoId: string) {
   return getVideoDownload(videoId)!;
 }
 
+async function removeIncompleteDownloads(video: Video) {
+  const downloadDirectory = path.join(
+    mediaRoot,
+    safeSegment(video.playlist_id),
+    safeSegment(video.youtube_id)
+  );
+
+  const entries = await fsp.readdir(downloadDirectory, { withFileTypes: true }).catch(() => []);
+
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    if (entry.name.endsWith(".part")) continue;
+    if (videoExtensions.has(path.extname(entry.name).toLowerCase())) {
+      await fsp.rm(path.join(downloadDirectory, entry.name), { force: true }).catch(() => {});
+    }
+  }
+}
+
+export async function cancelVideoDownload(videoId: string) {
+  abortedDownloads.add(videoId);
+
+  const child = runningYtDlp.get(videoId);
+  if (child?.pid) {
+    runningYtDlp.delete(videoId);
+    try {
+      // Kill the process group so yt-dlp and any ffmpeg merge subprocess die
+      // together. .part files are kept on disk so a later start can resume.
+      process.kill(-child.pid, "SIGKILL");
+    } catch {
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        // Process already gone.
+      }
+    }
+  }
+
+  const video = getVideo(videoId);
+  if (video) {
+    await removeIncompleteDownloads(video);
+  }
+
+  setDownload(videoId, {
+    status: "missing",
+    file_path: null,
+    file_size_bytes: null,
+    mime_type: null,
+    progress_percent: null,
+    downloaded_bytes: null,
+    total_bytes: null,
+    speed_bytes_per_second: null,
+    eta_seconds: null,
+    error: null
+  });
+
+  return getVideoDownload(videoId)!;
+}
+
 async function runVideoDownload(videoId: string) {
   const video = getVideo(videoId);
   if (!video) return;
@@ -415,6 +480,10 @@ async function runVideoDownload(videoId: string) {
 
   try {
     await fsp.mkdir(downloadDirectory, { recursive: true });
+    if (abortedDownloads.has(videoId)) {
+      abortedDownloads.delete(videoId);
+      return;
+    }
     setDownload(videoId, {
       status: "running",
       file_path: null,
@@ -429,9 +498,11 @@ async function runVideoDownload(videoId: string) {
     });
 
     await runYtDlp(
+      videoId,
       [
         "--newline",
         "--no-playlist",
+        "--continue",
         "--restrict-filenames",
         "--windows-filenames",
         "-f",
@@ -445,17 +516,30 @@ async function runVideoDownload(videoId: string) {
         videoUrl(video.youtube_id)
       ],
       (line) => {
+        if (abortedDownloads.has(videoId)) return;
         const progress = parseDownloadProgress(line);
         if (progress) setDownload(videoId, progress);
       }
     );
+    if (abortedDownloads.has(videoId)) {
+      abortedDownloads.delete(videoId);
+      return;
+    }
 
     const downloadedFile = await findDownloadedFile(downloadDirectory);
     if (!downloadedFile) {
       throw new Error("yt-dlp completed but no playable video file was found.");
     }
+    if (abortedDownloads.has(videoId)) {
+      abortedDownloads.delete(videoId);
+      return;
+    }
 
     const playableFilePath = await optimizeFileForStreaming(downloadedFile.filePath);
+    if (abortedDownloads.has(videoId)) {
+      abortedDownloads.delete(videoId);
+      return;
+    }
     const playableStats = await fsp.stat(playableFilePath);
 
     setDownload(videoId, {
@@ -471,6 +555,10 @@ async function runVideoDownload(videoId: string) {
       error: null
     });
   } catch (error) {
+    if (abortedDownloads.has(videoId)) {
+      abortedDownloads.delete(videoId);
+      return;
+    }
     setDownload(videoId, {
       status: "failed",
       file_path: null,
