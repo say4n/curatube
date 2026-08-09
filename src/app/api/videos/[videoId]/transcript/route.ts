@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getTranscript, getVideo } from "@/lib/db";
+import { getTranscript, getVideo, searchTranscript } from "@/lib/db";
 import { refreshVideoTranscript } from "@/lib/importer";
 
 export const runtime = "nodejs";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ videoId: string }> }
 ) {
   const { videoId: rawVideoId } = await params;
@@ -13,6 +13,12 @@ export async function GET(
 
   if (!getVideo(videoId)) {
     return NextResponse.json({ error: "Video not found." }, { status: 404 });
+  }
+
+  const query = new URL(request.url).searchParams.get("q") ?? "";
+
+  if (query.trim()) {
+    return NextResponse.json({ transcript: searchTranscript(videoId, query) });
   }
 
   return NextResponse.json({ transcript: getTranscript(videoId) });

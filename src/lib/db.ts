@@ -30,6 +30,20 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
   db.pragma("busy_timeout = 5000");
   db.pragma("foreign_keys = ON");
 
+  const transcriptFtsSql = (
+    db.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'transcript_fts'`).get() as
+      | { sql: string }
+      | undefined
+  )?.sql;
+  if (transcriptFtsSql?.includes("content='transcript_segments'")) {
+    db.exec(`
+      DROP TRIGGER IF EXISTS transcript_fts_ai;
+      DROP TRIGGER IF EXISTS transcript_fts_ad;
+      DROP TRIGGER IF EXISTS transcript_fts_au;
+      DROP TABLE IF EXISTS transcript_fts;
+    `);
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS playlists (
       id TEXT PRIMARY KEY,
@@ -126,6 +140,22 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
       ON videos(playlist_id, position);
     CREATE INDEX IF NOT EXISTS idx_import_jobs_status_created
       ON import_jobs(status, created_at);
+
+    CREATE VIRTUAL TABLE IF NOT EXISTS transcript_fts USING fts4(
+      video_id,
+      text
+    );
+
+    CREATE TRIGGER IF NOT EXISTS transcript_fts_ai AFTER INSERT ON transcript_segments BEGIN
+      INSERT INTO transcript_fts(rowid, video_id, text) VALUES (new.id, new.video_id, new.text);
+    END;
+    CREATE TRIGGER IF NOT EXISTS transcript_fts_ad AFTER DELETE ON transcript_segments BEGIN
+      DELETE FROM transcript_fts WHERE rowid = old.id;
+    END;
+    CREATE TRIGGER IF NOT EXISTS transcript_fts_au AFTER UPDATE ON transcript_segments BEGIN
+      DELETE FROM transcript_fts WHERE rowid = old.id;
+      INSERT INTO transcript_fts(rowid, video_id, text) VALUES (new.id, new.video_id, new.text);
+    END;
   `);
 
   const playlistColumns = db.prepare(`PRAGMA table_info(playlists)`).all() as Array<{
@@ -171,6 +201,20 @@ if (process.env.DEMO_MODE_ENABLED !== "true") {
       SELECT video_id, prefer_local_playback, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       FROM video_progress
       WHERE prefer_local_playback = 1
+    `);
+  }
+
+  const ftsSegmentCount = (
+    db.prepare(`SELECT count(*) AS c FROM transcript_segments`).get() as { c: number }
+  ).c;
+  const ftsIndexedCount = (
+    db.prepare(`SELECT count(*) AS c FROM transcript_fts`).get() as { c: number }
+  ).c;
+  if (ftsIndexedCount !== ftsSegmentCount) {
+    db.exec(`
+      DELETE FROM transcript_fts;
+      INSERT INTO transcript_fts(rowid, video_id, text)
+        SELECT id, video_id, text FROM transcript_segments;
     `);
   }
 }
@@ -459,6 +503,41 @@ export function getTranscript(videoId: string) {
        ORDER BY position ASC`
     )
     .all(videoId) as TranscriptSegment[];
+}
+
+function buildFtsMatch(query: string) {
+  return query
+    .split(/\s+/)
+    .map((token) => token.replace(/[^A-Za-z0-9_\u00C0-\uFFFF]/g, ""))
+    .filter(Boolean)
+    .map((token) => `"${token}"*`)
+    .join(" ");
+}
+
+export function searchTranscript(videoId: string, query: string) {
+  if (!query.trim()) return [] as TranscriptSegment[];
+
+  if (process.env.DEMO_MODE_ENABLED === "true") {
+    const needle = query.toLowerCase();
+    return getTranscript(videoId).filter((segment) =>
+      segment.text.toLowerCase().includes(needle)
+    );
+  }
+
+  const match = buildFtsMatch(query);
+  if (!match) return [] as TranscriptSegment[];
+
+  return db
+    .prepare(
+      `SELECT ts.id, ts.video_id, ts.start_seconds, ts.duration_seconds, ts.text, ts.position
+       FROM transcript_fts
+       JOIN transcript_segments ts ON ts.rowid = transcript_fts.rowid
+       WHERE transcript_fts.video_id = ?
+         AND transcript_fts MATCH ?
+       ORDER BY ts.position ASC
+       LIMIT 100`
+    )
+    .all(videoId, match) as TranscriptSegment[];
 }
 
 export function getNote(videoId: string) {

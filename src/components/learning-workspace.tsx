@@ -16,8 +16,10 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   RefreshCw,
+  Search,
   Square,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
 import type { Playlist, TranscriptSegment, Video, VideoProgress } from "@/lib/db";
 import { formatTimestamp } from "@/lib/time";
@@ -156,6 +158,9 @@ export function LearningWorkspace({
   const [courseListOpen, setCourseListOpen] = useState(false);
   const [transcriptSegments, setTranscriptSegments] = useState(transcript);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
+  const [transcriptQuery, setTranscriptQuery] = useState("");
+  const [transcriptSearchResults, setTranscriptSearchResults] = useState<TranscriptSegment[]>([]);
+  const [transcriptSearchBusy, setTranscriptSearchBusy] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
   const [youtubePlayerVisible, setYoutubePlayerVisible] = useState(false);
   const [embedBlocked, setEmbedBlocked] = useState(initialYoutubeEmbedBlocked);
@@ -261,6 +266,7 @@ export function LearningWorkspace({
     setDownloadStatus(initialDownloadStatus);
     setPreferLocalPlayback(initialPreferLocalPlayback);
     setPendingLocalSeek(null);
+    setTranscriptQuery("");
     setCurrentPlaybackTime(initialProgressSeconds);
     playbackTimeRef.current = initialProgressSeconds;
     lastLocalProgressBucketRef.current = -1;
@@ -400,6 +406,7 @@ export function LearningWorkspace({
   }, [embedBlocked, localVideoActive, playerReady, video.id]);
 
   useEffect(() => {
+    if (transcriptQuery.trim()) return;
     if (activeTranscriptIndex < 0) return;
 
     const segment = transcriptSegments[activeTranscriptIndex];
@@ -413,7 +420,7 @@ export function LearningWorkspace({
       top: item.offsetTop - list.offsetTop,
       behavior: "smooth"
     });
-  }, [activeTranscriptIndex, transcriptSegments]);
+  }, [activeTranscriptIndex, transcriptQuery, transcriptSegments]);
 
   useEffect(() => {
     if (!embedBlocked) return;
@@ -554,6 +561,52 @@ export function LearningWorkspace({
     } finally {
       setTranscriptBusy(false);
     }
+  }
+
+  useEffect(() => {
+    const query = transcriptQuery.trim();
+    if (!query) {
+      setTranscriptSearchResults([]);
+      setTranscriptSearchBusy(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setTranscriptSearchBusy(true);
+      try {
+        const response = await fetch(
+          `/api/videos/${encodedVideoId}/transcript?q=${encodeURIComponent(query)}`,
+          { cache: "no-store" }
+        );
+        if (!response.ok || cancelled) return;
+        const data = (await response.json()) as { transcript: TranscriptSegment[] };
+        if (!cancelled) setTranscriptSearchResults(data.transcript);
+      } finally {
+        if (!cancelled) setTranscriptSearchBusy(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [encodedVideoId, transcriptQuery]);
+
+  function highlightMatch(text: string, query: string) {
+    const needle = query.trim().toLowerCase();
+    const lower = text.toLowerCase();
+    const index = lower.indexOf(needle);
+    if (index === -1 || !needle) return { before: text, match: "", after: "" };
+
+    const context = 40;
+    const start = Math.max(0, index - context);
+    const end = Math.min(text.length, index + needle.length + context);
+    return {
+      before: `${start > 0 ? "…" : ""}${text.slice(start, index)}`,
+      match: text.slice(index, index + needle.length),
+      after: `${text.slice(index + needle.length, end)}${end < text.length ? "…" : ""}`
+    };
   }
 
   function seekTo(seconds: number) {
@@ -1100,7 +1153,37 @@ export function LearningWorkspace({
                   </span>
                 </div>
 
-                {transcriptSegments.length === 0 ? (
+                <div className="relative mb-3">
+                  <Search
+                    size={15}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#81776a]"
+                  />
+                  <input
+                    type="text"
+                    value={transcriptQuery}
+                    onChange={(event) => setTranscriptQuery(event.target.value)}
+                    placeholder="Search transcript…"
+                    className="h-10 w-full rounded-md border border-[#c9c0b2] bg-white pl-9 pr-9 text-sm text-ink outline-none transition placeholder:text-[#a89e90] focus:border-rust"
+                  />
+                  {transcriptSearchBusy ? (
+                    <Loader2
+                      size={15}
+                      className="animate-spin absolute right-3 top-1/2 -translate-y-1/2 text-moss"
+                    />
+                  ) : transcriptQuery ? (
+                    <button
+                      type="button"
+                      onClick={() => setTranscriptQuery("")}
+                      aria-label="Clear transcript search"
+                      title="Clear transcript search"
+                      className="absolute right-1.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-[#81776a] transition hover:bg-cloud hover:text-ink"
+                    >
+                      <X size={15} />
+                    </button>
+                  ) : null}
+                </div>
+
+                {transcriptSegments.length === 0 && !transcriptQuery.trim() ? (
                   <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-[#c9c0b2] bg-paper px-4 text-center text-sm font-semibold text-[#6c6257]">
                     <span>No English transcript is stored for this video yet.</span>
                     <button
@@ -1122,28 +1205,64 @@ export function LearningWorkspace({
                       ref={transcriptListRef}
                       className="hover-scrollbar max-h-[52vh] overflow-y-auto md:max-h-[38vh] xl:max-h-[360px]"
                     >
-                      {transcriptSegments.map((segment, index) => (
-                        <button
-                          key={segment.id}
-                          ref={(element) => {
-                            if (element) {
-                              transcriptItemRefs.current.set(segment.id, element);
-                            } else {
-                              transcriptItemRefs.current.delete(segment.id);
-                            }
-                          }}
-                          type="button"
-                          onClick={() => seekTo(segment.start_seconds)}
-                          className={`grid w-full grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-[#eee9de] px-3 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud sm:grid-cols-[72px_minmax(0,1fr)] sm:px-4 ${
-                            index === activeTranscriptIndex ? "bg-cloud" : ""
-                          }`}
-                        >
-                          <span className="font-mono font-bold text-rust">
-                            {formatTimestamp(segment.start_seconds)}
-                          </span>
-                          <span className="leading-relaxed text-[#312c27]">{segment.text}</span>
-                        </button>
-                      ))}
+                      {transcriptQuery.trim() ? (
+                        transcriptSearchResults.length === 0 ? (
+                          <div className="px-4 py-6 text-center text-sm font-semibold text-[#6c6257]">
+                            {transcriptSearchBusy ? "Searching…" : "No matches"}
+                          </div>
+                        ) : (
+                          transcriptSearchResults.map((segment) => {
+                            const highlighted = highlightMatch(
+                              segment.text,
+                              transcriptQuery
+                            );
+                            return (
+                              <button
+                                key={segment.id}
+                                type="button"
+                                onClick={() => seekTo(segment.start_seconds)}
+                                className="grid w-full grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-[#eee9de] px-3 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud sm:grid-cols-[72px_minmax(0,1fr)] sm:px-4"
+                              >
+                                <span className="font-mono font-bold text-rust">
+                                  {formatTimestamp(segment.start_seconds)}
+                                </span>
+                                <span className="leading-relaxed text-[#312c27]">
+                                  {highlighted.before}
+                                  {highlighted.match ? (
+                                    <mark className="rounded-sm bg-[#f5e6b8] px-0.5 font-semibold">
+                                      {highlighted.match}
+                                    </mark>
+                                  ) : null}
+                                  {highlighted.after}
+                                </span>
+                              </button>
+                            );
+                          })
+                        )
+                      ) : (
+                        transcriptSegments.map((segment, index) => (
+                          <button
+                            key={segment.id}
+                            ref={(element) => {
+                              if (element) {
+                                transcriptItemRefs.current.set(segment.id, element);
+                              } else {
+                                transcriptItemRefs.current.delete(segment.id);
+                              }
+                            }}
+                            type="button"
+                            onClick={() => seekTo(segment.start_seconds)}
+                            className={`grid w-full grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-[#eee9de] px-3 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud sm:grid-cols-[72px_minmax(0,1fr)] sm:px-4 ${
+                              index === activeTranscriptIndex ? "bg-cloud" : ""
+                            }`}
+                          >
+                            <span className="font-mono font-bold text-rust">
+                              {formatTimestamp(segment.start_seconds)}
+                            </span>
+                            <span className="leading-relaxed text-[#312c27]">{segment.text}</span>
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
