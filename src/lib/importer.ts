@@ -52,6 +52,14 @@ type ImportedPlaylist = {
   videos: ImportedVideo[];
 };
 
+type TranscriptLine = {
+  start: number;
+  end: number;
+  text: string;
+};
+
+const transcriptFetchConcurrency = 3;
+
 function now() {
   return new Date().toISOString();
 }
@@ -370,32 +378,45 @@ async function runImport(jobId: string) {
       playlist_id: playlist.id
     });
 
-    const insertSegment = db.prepare(
-      `INSERT OR REPLACE INTO transcript_segments
-        (video_id, start_seconds, duration_seconds, text, position)
-       VALUES (?, ?, ?, ?, ?)`
-    );
-
-    for (const [index, video] of playlist.videos.entries()) {
-      setJob(jobId, {
-        progress: 20 + Math.floor((index / Math.max(playlist.videos.length, 1)) * 75),
-        message: `Fetching transcripts (${index + 1}/${playlist.videos.length})`
+    const writeTranscript = db.transaction((videoId: string, segments: TranscriptLine[]) => {
+      db.prepare(`DELETE FROM transcript_segments WHERE video_id = ?`).run(videoId);
+      const insertSegment = db.prepare(
+        `INSERT OR REPLACE INTO transcript_segments
+          (video_id, start_seconds, duration_seconds, text, position)
+         VALUES (?, ?, ?, ?, ?)`
+      );
+      segments.forEach((segment, segmentIndex) => {
+        insertSegment.run(
+          videoId,
+          segment.start,
+          Math.max(0, segment.end - segment.start),
+          segment.text,
+          segmentIndex + 1
+        );
       });
+    });
 
-      const segments = await fetchTranscript(video.youtubeId);
-      db.transaction(() => {
-        db.prepare(`DELETE FROM transcript_segments WHERE video_id = ?`).run(video.id);
-        segments.forEach((segment, segmentIndex) => {
-          insertSegment.run(
-            video.id,
-            segment.start,
-            Math.max(0, segment.end - segment.start),
-            segment.text,
-            segmentIndex + 1
-          );
-        });
-      })();
-    }
+    const videos = playlist.videos;
+    let nextIndex = 0;
+    let completed = 0;
+    const total = videos.length;
+    const workers = Array.from(
+      { length: Math.min(transcriptFetchConcurrency, total) },
+      async () => {
+        while (nextIndex < videos.length) {
+          const index = nextIndex++;
+          const video = videos[index];
+          const segments = await fetchTranscript(video.youtubeId);
+          writeTranscript(video.id, segments);
+          completed += 1;
+          setJob(jobId, {
+            progress: 20 + Math.floor((completed / Math.max(total, 1)) * 75),
+            message: `Fetching transcripts (${completed}/${total})`
+          });
+        }
+      }
+    );
+    await Promise.all(workers);
 
     db.prepare(
       `UPDATE playlists
