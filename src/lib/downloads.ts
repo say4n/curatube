@@ -12,10 +12,8 @@ const runningPreparations = new Map<string, Promise<VideoDownload>>();
 const mediaRoot = mediaDir;
 const videoExtensions = new Set([".mp4", ".webm", ".mkv", ".mov"]);
 const preferredDownloadFormat =
-  "bv*[vcodec^=avc1][ext=mp4][height<=1440][fps<=60]+ba[acodec^=mp4a][ext=m4a]/" +
-  "b[vcodec^=avc1][acodec^=mp4a][ext=mp4][height<=1440][fps<=60]/" +
-  "bv*[ext=mp4][height<=1440][fps<=60]+ba[ext=m4a]/" +
-  "b[ext=mp4][height<=1440][fps<=60]/" +
+  "bv*[vcodec^=vp9][height<=1440][fps<=60]+ba[acodec^=opus]/" +
+  "b[vcodec^=vp9][acodec^=opus][height<=1440][fps<=60]/" +
   "bv*[height<=1440][fps<=60]+ba/" +
   "b[height<=1440][fps<=60]/" +
   "bv*[height<=1440]+ba/b[height<=1440]/bv*+ba/best";
@@ -196,49 +194,10 @@ async function findDownloadedFile(directory: string) {
   return files.sort((a, b) => b.size - a.size)[0] ?? null;
 }
 
-type MediaInfo = {
-  streams?: Array<{
-    codec_name?: string;
-    codec_type?: string;
-  }>;
-};
-
-async function readMediaInfo(filePath: string) {
-  const { stdout } = await execFileAsync(
-    "ffprobe",
-    [
-      "-v",
-      "error",
-      "-show_entries",
-      "stream=codec_type,codec_name",
-      "-of",
-      "json",
-      filePath
-    ],
-    { maxBuffer: 4 * 1024 * 1024 }
-  );
-
-  return JSON.parse(stdout) as MediaInfo;
-}
-
-function isSafariCompatibleMp4(filePath: string, mediaInfo: MediaInfo) {
-  if (path.extname(filePath).toLowerCase() !== ".mp4") return false;
-
-  const streams = mediaInfo.streams ?? [];
-  const video = streams.find((stream) => stream.codec_type === "video");
-  const audioStreams = streams.filter((stream) => stream.codec_type === "audio");
-
-  return (
-    video?.codec_name === "h264" &&
-    audioStreams.every((stream) => stream.codec_name === "aac")
-  );
-}
-
-async function optimizeMp4ForStreaming(filePath: string) {
-  const mediaInfo = await readMediaInfo(filePath);
-  const safariCompatible = isSafariCompatibleMp4(filePath, mediaInfo);
-
-  if (safariCompatible && (await isMp4OptimizedForStreaming(filePath))) {
+async function optimizeFileForStreaming(filePath: string) {
+  // WebM (VP9 + Opus) streams progressively and seeks via cues in every
+  // supported browser, so no remux is needed.
+  if (path.extname(filePath).toLowerCase() === ".webm") {
     return filePath;
   }
 
@@ -246,22 +205,10 @@ async function optimizeMp4ForStreaming(filePath: string) {
   const basePath = filePath.slice(0, -extension.length);
   const finalPath = extension.toLowerCase() === ".mp4" ? filePath : `${basePath}.mp4`;
   const temporaryPath = `${finalPath}.${process.pid}.${Date.now()}.tmp.mp4`;
-  const codecArgs = safariCompatible
-    ? ["-c", "copy"]
-    : [
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-crf",
-        "20",
-        "-pix_fmt",
-        "yuv420p",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "160k"
-      ];
+
+  if (await isMp4OptimizedForStreaming(finalPath)) {
+    return finalPath;
+  }
 
   try {
     await execFileAsync(
@@ -273,11 +220,8 @@ async function optimizeMp4ForStreaming(filePath: string) {
         "-y",
         "-i",
         filePath,
-        "-map",
-        "0:v:0",
-        "-map",
-        "0:a?",
-        ...codecArgs,
+        "-c",
+        "copy",
         "-movflags",
         "+faststart",
         temporaryPath
@@ -319,7 +263,7 @@ async function prepareVideoDownloadForStreamingNow(videoId: string) {
     return download;
   }
 
-  const playableFilePath = await optimizeMp4ForStreaming(download.file_path);
+  const playableFilePath = await optimizeFileForStreaming(download.file_path);
   const playableStats = await fsp.stat(playableFilePath);
 
   if (playableFilePath !== download.file_path || playableStats.size !== download.file_size_bytes) {
@@ -493,7 +437,7 @@ async function runVideoDownload(videoId: string) {
         "-f",
         preferredDownloadFormat,
         "--merge-output-format",
-        "mp4",
+        "webm/mp4",
         "--progress-template",
         "download:curatube-progress:%(progress._percent_str)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.speed)s|%(progress.eta)s",
         "-o",
@@ -511,7 +455,7 @@ async function runVideoDownload(videoId: string) {
       throw new Error("yt-dlp completed but no playable video file was found.");
     }
 
-    const playableFilePath = await optimizeMp4ForStreaming(downloadedFile.filePath);
+    const playableFilePath = await optimizeFileForStreaming(downloadedFile.filePath);
     const playableStats = await fsp.stat(playableFilePath);
 
     setDownload(videoId, {
