@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { ImportJob, Playlist } from "@/lib/db";
 import { ExportNotesButtons } from "./export-notes-buttons";
+import { ThemeToggle } from "./theme-toggle";
 
 type Props = {
   initialPlaylists: Playlist[];
@@ -298,9 +299,9 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
 
   return (
     <main className="flex min-h-screen flex-col bg-paper">
-      <section className="border-b border-[#d8d1c3] bg-[#fffdf8]">
+      <section className="border-b border-line bg-surface">
         <div className="mx-auto max-w-6xl px-5 py-10 md:py-14">
-          <div className="mb-8 max-w-3xl">
+          <div className="mb-8">
             <div className="mb-4 flex items-center gap-4">
               <Image
                 src="/icon.svg"
@@ -313,10 +314,15 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
               <div className="text-sm font-semibold uppercase tracking-[0.16em] text-rust">
                 Curatube
               </div>
+              <div className="ml-auto shrink-0">
+                <ThemeToggle />
+              </div>
             </div>
-            <h1 className="text-3xl font-black leading-tight text-ink sm:text-4xl md:text-6xl">
-              Learn without the distractions.
-            </h1>
+            <div className="max-w-3xl">
+              <h1 className="text-3xl font-black leading-tight text-ink sm:text-4xl md:text-6xl">
+                Learn without the distractions.
+              </h1>
+            </div>
           </div>
 
           <form onSubmit={submitImport} className="flex flex-col gap-3 md:flex-row">
@@ -328,13 +334,13 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
               value={url}
               onChange={(event) => setUrl(event.target.value)}
               placeholder="Paste a YouTube playlist or video URL"
-              className="min-h-16 flex-1 rounded-md border border-[#c9c0b2] bg-white px-5 text-lg text-ink shadow-sm outline-none transition placeholder:text-[#82786b] focus:border-moss focus:ring-4 focus:ring-moss/15"
+              className="min-h-16 flex-1 rounded-md border border-line-strong bg-surface px-5 text-lg text-ink shadow-sm outline-none transition placeholder:text-faint focus:border-moss focus:ring-4 focus:ring-moss/15"
               required
             />
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex min-h-16 items-center justify-center gap-2 rounded-md bg-ink px-6 text-base font-bold text-white transition hover:bg-moss disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-16 items-center justify-center gap-2 rounded-md bg-invert px-6 text-base font-bold text-white transition hover:bg-moss disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? <Loader2 className="animate-spin" size={19} /> : <Plus size={19} />}
               Import
@@ -348,7 +354,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
               {jobs.map((job) => (
                 <div
                   key={job.id}
-                  className="flex flex-col gap-2 rounded-md border border-[#d8d1c3] bg-paper px-4 py-3 text-sm md:flex-row md:items-center"
+                  className="flex flex-col gap-2 rounded-md border border-line bg-paper px-4 py-3 text-sm md:flex-row md:items-center"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                     {job.status === "running" || job.status === "queued" ? (
@@ -357,7 +363,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                       <Clock className="text-rust" size={17} />
                     )}
                     <span className="font-semibold capitalize">{job.status}</span>
-                    <span className="min-w-0 truncate text-[#6c6257]">{job.message ?? job.source_url}</span>
+                    <span className="min-w-0 truncate text-muted">{job.message ?? job.source_url}</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-cloud md:w-40">
                     <div
@@ -376,7 +382,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
         <div className="mb-4">
           <div>
             <h2 className="text-2xl font-black text-ink">Continue learning</h2>
-            <span className="text-sm font-semibold text-[#6c6257]">
+            <span className="text-sm font-semibold text-muted">
               {playlists.length === activePlaylistCount && playlistFilter === "active"
                 ? `${activePlaylistCount} courses`
                 : `${playlists.length} of ${archiveFilteredPlaylists.length} courses`}
@@ -392,14 +398,14 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
               </label>
               <Search
                 size={18}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#82786b]"
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint"
               />
               <input
                 id="playlist-search"
                 value={playlistSearch}
                 onChange={(event) => setPlaylistSearch(event.target.value)}
                 placeholder="Search by playlist, channel, or URL"
-                className="h-12 w-full rounded-md border border-[#c9c0b2] bg-[#fffdf8] pl-11 pr-11 text-base font-medium text-ink shadow-sm outline-none transition placeholder:text-[#82786b] focus:border-moss focus:bg-white focus:ring-4 focus:ring-moss/15"
+                className="h-12 w-full rounded-md border border-line-strong bg-surface pl-11 pr-11 text-base font-medium text-ink shadow-sm outline-none transition placeholder:text-faint focus:border-moss focus:bg-surface focus:ring-4 focus:ring-moss/15"
               />
               {playlistSearch ? (
                 <button
@@ -407,7 +413,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                   onClick={() => setPlaylistSearch("")}
                   aria-label="Clear playlist search"
                   title="Clear search"
-                  className="absolute right-0 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-[#6c6257] transition hover:bg-cloud hover:text-ink sm:right-2 sm:h-8 sm:w-8"
+                  className="absolute right-0 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted transition hover:bg-cloud hover:text-ink sm:right-2 sm:h-8 sm:w-8"
                 >
                   <X size={16} />
                 </button>
@@ -421,10 +427,10 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                 aria-haspopup="menu"
                 aria-label="Filter playlists"
                 title="Filter playlists"
-                className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-[#c9c0b2] px-4 text-sm font-bold shadow-sm transition sm:w-12 sm:px-0 ${
+                className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-line-strong px-4 text-sm font-bold shadow-sm transition sm:w-12 sm:px-0 ${
                   playlistFilter === "active"
-                    ? "bg-[#fffdf8] text-ink hover:bg-cloud"
-                    : "bg-ink text-white hover:bg-[#2d2924]"
+                    ? "bg-surface text-ink hover:bg-cloud"
+                    : "bg-invert text-white hover:bg-invert-hover"
                 }`}
               >
                 <Filter size={18} />
@@ -433,7 +439,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
               {filterMenuOpen ? (
                 <div
                   role="menu"
-                  className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-md border border-[#d8d1c3] bg-white p-1 shadow-lg"
+                  className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-md border border-line bg-surface p-1 shadow-lg"
                 >
                   {[
                     ["active", "Active playlists"],
@@ -450,8 +456,8 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                       }}
                       className={`flex h-10 w-full items-center gap-2 rounded-md px-3 text-left text-sm font-semibold transition ${
                         playlistFilter === value
-                          ? "bg-ink text-white"
-                          : "text-[#413a33] hover:bg-cloud"
+                          ? "bg-invert text-white"
+                          : "text-soft hover:bg-cloud"
                       }`}
                     >
                       <Filter size={16} />
@@ -469,7 +475,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                 aria-haspopup="menu"
                 aria-label="Sort playlists"
                 title="Sort playlists"
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-[#c9c0b2] bg-[#fffdf8] px-4 text-sm font-bold text-ink shadow-sm transition hover:bg-cloud sm:w-12 sm:px-0"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 text-sm font-bold text-ink shadow-sm transition hover:bg-cloud sm:w-12 sm:px-0"
               >
                 <ArrowUpDown size={18} />
                 <span className="sm:hidden">Sort</span>
@@ -477,7 +483,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
               {sortMenuOpen ? (
                 <div
                   role="menu"
-                  className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-md border border-[#d8d1c3] bg-white p-1 shadow-lg"
+                  className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-md border border-line bg-surface p-1 shadow-lg"
                 >
                   <button
                     type="button"
@@ -489,8 +495,8 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                     }}
                     className={`flex h-10 w-full items-center gap-2 rounded-md px-3 text-left text-sm font-semibold transition ${
                       sortBy === "last-watched"
-                        ? "bg-ink text-white"
-                        : "text-[#413a33] hover:bg-cloud"
+                        ? "bg-invert text-white"
+                        : "text-soft hover:bg-cloud"
                     }`}
                   >
                     <Clock size={16} />
@@ -506,8 +512,8 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                     }}
                     className={`mt-1 flex h-10 w-full items-center gap-2 rounded-md px-3 text-left text-sm font-semibold transition ${
                       sortBy === "date-added"
-                        ? "bg-ink text-white"
-                        : "text-[#413a33] hover:bg-cloud"
+                        ? "bg-invert text-white"
+                        : "text-soft hover:bg-cloud"
                     }`}
                   >
                     <CalendarDays size={16} />
@@ -520,14 +526,14 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
         </div>
 
         {playlistItems.length === 0 ? (
-          <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed border-[#c9c0b2] bg-[#fffdf8] px-5 text-center">
+          <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed border-line-strong bg-surface px-5 text-center">
             <BookOpen className="mb-4 text-moss" size={34} />
             <p className="max-w-md text-base font-semibold text-ink">
               Courses will appear here after yt-dlp finishes fetching metadata.
             </p>
           </div>
         ) : playlists.length === 0 ? (
-          <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed border-[#c9c0b2] bg-[#fffdf8] px-5 text-center">
+          <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed border-line-strong bg-surface px-5 text-center">
             <Search className="mb-4 text-moss" size={34} />
             <p className="max-w-md text-base font-semibold text-ink">
               No imported playlists match the current search and filter.
@@ -551,7 +557,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                   key={playlist.id}
                   onMouseMove={tiltPlaylistCard}
                   onMouseLeave={resetPlaylistCardTilt}
-                  className={`group overflow-hidden rounded-md border border-[#d8d1c3] bg-[#fffdf8] shadow-sm transition duration-200 ease-out will-change-transform hover:border-moss hover:shadow-lg ${
+                  className={`group overflow-hidden rounded-md border border-line bg-surface shadow-sm transition duration-200 ease-out will-change-transform hover:border-moss hover:shadow-lg ${
                     archived ? "opacity-70" : ""
                   }`}
                 >
@@ -592,7 +598,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                     </div>
                   </Link>
                   <div className="flex items-center justify-between gap-3 px-4 pb-4">
-                    <p className="min-w-0 truncate text-sm font-medium text-[#6c6257]">
+                    <p className="min-w-0 truncate text-sm font-medium text-muted">
                       {playlist.channel ?? "YouTube playlist"}
                     </p>
                     <div className="flex shrink-0 items-center gap-1.5">
@@ -603,7 +609,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                         }}
                         aria-label={archived ? `Unarchive ${playlist.title}` : `Archive ${playlist.title}`}
                         title={archived ? "Unarchive playlist" : "Archive playlist"}
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-line-strong bg-surface text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
                       >
                         {archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                       </button>
@@ -612,7 +618,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                         href={`/playlists/${playlist.id}`}
                         aria-label={`Open ${playlist.title}`}
                         title="Open course"
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-ink text-white transition hover:bg-moss sm:h-9 sm:w-9"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-invert text-white transition hover:bg-moss sm:h-9 sm:w-9"
                       >
                         <ArrowRight
                           size={17}
@@ -627,8 +633,8 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
           </div>
         )}
       </section>
-      <footer className="border-t border-[#d8d1c3] bg-[#fffdf8]">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-6 text-sm font-medium text-[#6c6257] sm:flex-row sm:items-center sm:justify-between">
+      <footer className="border-t border-line bg-surface">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-6 text-sm font-medium text-muted sm:flex-row sm:items-center sm:justify-between">
           <span>
             Curatube
             {buildCommit ? (
@@ -636,7 +642,7 @@ export function HomePage({ initialPlaylists, initialJobs, buildCommit }: Props) 
                 href={`https://github.com/say4n/curatube/commit/${buildCommit}`}
                 target="_blank"
                 rel="noreferrer"
-                className="ml-2 font-mono text-xs text-[#82786b] transition hover:text-moss"
+                className="ml-2 font-mono text-xs text-faint transition hover:text-moss"
               >
                 {buildCommit}
               </a>

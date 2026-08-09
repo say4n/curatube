@@ -4,6 +4,7 @@ import { ArrowLeft, Download } from "lucide-react";
 import { LearningWorkspace } from "@/components/learning-workspace";
 import { ExportNotesButtons } from "@/components/export-notes-buttons";
 import { DeletePlaylistButton } from "@/components/delete-playlist-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   getNote,
   getPlaylist,
@@ -64,12 +65,12 @@ export default async function VideoPage({
     : null;
 
   return (
-    <main className="min-h-screen min-h-dvh bg-[#f7f4ef]">
-      <div className="border-b border-[#d8d1c3] bg-[#fffdf8]/85 backdrop-blur">
+    <main className="min-h-screen min-h-dvh bg-paper">
+      <div className="border-b border-line bg-surface/85 backdrop-blur">
         <div className="flex w-full items-center gap-2 px-3 py-2 sm:gap-4 sm:px-5 sm:py-3">
           <Link
             href="/"
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
             aria-label="Back to playlists"
           >
             <ArrowLeft size={18} />
@@ -79,6 +80,7 @@ export default async function VideoPage({
             <h1 className="truncate text-base font-bold text-ink">{video.title}</h1>
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <ThemeToggle />
             <ExportNotesButtons playlistId={playlist.id} playlistTitle={playlist.title} />
             <DeletePlaylistButton playlistId={playlist.id} playlistTitle={playlist.title} />
           </div>

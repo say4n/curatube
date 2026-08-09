@@ -59,18 +59,18 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
   const renderedBody = useMemo(() => linkifyTimestamps(body), [body]);
 
   return (
-    <aside className="h-full min-h-0 border-t border-[#d8d1c3] bg-[#fffdf8] xl:border-l xl:border-t-0">
+    <aside className="h-full min-h-0 border-t border-line bg-surface xl:border-l xl:border-t-0">
       <div className="flex h-full min-h-[320px] flex-col sm:min-h-[380px] xl:min-h-0">
-        <div className="flex items-center justify-between gap-3 border-b border-[#d8d1c3] px-4 py-3">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <h2 className="text-base font-black text-ink">Notes</h2>
           <div className="flex items-center gap-2">
-            <span className="min-w-16 text-right text-xs font-semibold text-[#6c6257]">
+            <span className="min-w-16 text-right text-xs font-semibold text-muted">
               {saving ? "Saving" : saved ? "Saved" : "Unsaved"}
             </span>
             <button
               type="button"
               onClick={() => setPreview((value) => !value)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-line-strong bg-surface text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
               aria-label={preview ? "Edit note" : "Preview note"}
             >
               {preview ? <Pencil size={17} /> : <Eye size={17} />}
@@ -78,7 +78,7 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
             <button
               type="button"
               onClick={() => setSaved(false)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-ink text-white transition hover:bg-moss sm:h-9 sm:w-9"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-invert text-white transition hover:bg-moss sm:h-9 sm:w-9"
               aria-label="Save note"
             >
               <Save size={17} />
@@ -88,7 +88,7 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
 
         <div className="min-h-0 flex-1 overflow-hidden">
           {preview ? (
-            <div className="hover-scrollbar prose-note h-full overflow-auto px-4 py-3 text-[#312c27]">
+            <div className="hover-scrollbar prose-note h-full overflow-auto px-4 py-3 text-body">
               {body.trim() ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm, remarkMath]}
@@ -124,7 +124,7 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
                   {renderedBody}
                 </ReactMarkdown>
               ) : (
-                <p className="text-sm font-semibold text-[#6c6257]">
+                <p className="text-sm font-semibold text-muted">
                   Write Markdown notes with math like $E = mc^2$ and timestamps like 2:36.
                 </p>
               )}
@@ -138,7 +138,7 @@ export function NoteEditor({ videoId, initialNote, onSeek }: Props) {
               }}
               spellCheck
               placeholder={"Markdown notes...\n\nUse $x^2$ or $$\\int_0^1 x dx$$ for math.\nType 2:36 to create a clickable timestamp in preview."}
-              className="hover-scrollbar h-full min-h-0 w-full resize-none border-0 bg-[#fffdf8] px-4 py-3 font-mono text-base leading-6 text-ink outline-none placeholder:text-[#8a8175] sm:text-sm"
+              className="hover-scrollbar h-full min-h-0 w-full resize-none border-0 bg-surface px-4 py-3 font-mono text-base leading-6 text-ink outline-none placeholder:text-faint sm:text-sm"
             />
           )}
         </div>

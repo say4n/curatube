@@ -58,7 +58,7 @@ export function DeletePlaylistButton({ playlistId, playlistTitle }: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-playlist-title"
-            className="max-h-full w-full max-w-md overflow-y-auto rounded-md border border-[#d8d1c3] bg-[#fffdf8] p-5 shadow-xl"
+            className="max-h-full w-full max-w-md overflow-y-auto rounded-md border border-line bg-surface p-5 shadow-xl"
           >
             <div className="mb-4 flex items-start gap-3">
               <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-rust text-white">
@@ -68,7 +68,7 @@ export function DeletePlaylistButton({ playlistId, playlistTitle }: Props) {
                 <h2 id="delete-playlist-title" className="text-lg font-black text-ink">
                   Delete playlist?
                 </h2>
-                <p className="mt-1 text-sm leading-6 text-[#6c6257]">
+                <p className="mt-1 text-sm leading-6 text-muted">
                   <span className="font-semibold text-ink">{playlistTitle}</span> will be deleted.
                   Notes and progress will be kept.
                 </p>
@@ -80,7 +80,7 @@ export function DeletePlaylistButton({ playlistId, playlistTitle }: Props) {
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={busy}
-                className="inline-flex h-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white px-4 text-sm font-bold text-ink transition hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60 sm:h-10"
+                className="inline-flex h-11 items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-sm font-bold text-ink transition hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60 sm:h-10"
               >
                 Cancel
               </button>

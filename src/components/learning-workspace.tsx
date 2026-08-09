@@ -773,7 +773,7 @@ export function LearningWorkspace({
       }`}
     >
       <aside
-        className={`course-list-viewport border-b border-[#d8d1c3] bg-[#fffdf8] lg:border-b-0 lg:border-r ${
+        className={`course-list-viewport border-b border-line bg-surface lg:border-b-0 lg:border-r ${
           courseListOpen ? "block" : "hidden"
         }`}
       >
@@ -787,7 +787,7 @@ export function LearningWorkspace({
               onClick={() => setCourseListOpen(false)}
               aria-label="Collapse course videos"
               title="Collapse course videos"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#d8d1c3] bg-white text-ink transition hover:bg-cloud sm:h-8 sm:w-8"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-line bg-surface text-ink transition hover:bg-cloud sm:h-8 sm:w-8"
             >
               <PanelLeftClose size={16} />
             </button>
@@ -801,8 +801,8 @@ export function LearningWorkspace({
                   key={item.id}
                   className={`grid grid-cols-[64px_minmax(0,1fr)_44px] items-center gap-2 rounded-md p-1.5 text-sm transition sm:grid-cols-[64px_minmax(0,1fr)_32px] ${
                     item.id === video.id
-                      ? "bg-ink text-white"
-                      : "text-[#413a33] hover:bg-cloud"
+                      ? "bg-invert text-white"
+                      : "text-soft hover:bg-cloud"
                   }`}
                 >
                   <Link
@@ -820,7 +820,7 @@ export function LearningWorkspace({
                       />
                     ) : (
                       <div
-                        className={`flex h-full items-center justify-center bg-[#e8e1d6] text-moss transition ${
+                        className={`flex h-full items-center justify-center bg-track text-moss transition ${
                           completed ? "grayscale opacity-45" : ""
                         }`}
                       >
@@ -850,7 +850,7 @@ export function LearningWorkspace({
                         ? "bg-white/10 text-white hover:bg-white/20"
                         : completed
                           ? "bg-moss text-white hover:bg-moss/85"
-                          : "border border-[#c9c0b2] bg-white text-[#6c6257] hover:bg-cloud hover:text-ink"
+                          : "border border-line-strong bg-surface text-muted hover:bg-cloud hover:text-ink"
                     }`}
                   >
                     {completed ? <CheckCircle2 size={17} /> : <Circle size={17} />}
@@ -880,7 +880,7 @@ export function LearningWorkspace({
                   <button
                     type="button"
                     onClick={() => setCourseListOpen(true)}
-                    className="inline-flex h-11 items-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-sm font-bold text-ink transition hover:bg-cloud sm:h-9"
+                    className="inline-flex h-11 items-center gap-2 rounded-md border border-line-strong bg-surface px-3 text-sm font-bold text-ink transition hover:bg-cloud sm:h-9"
                   >
                     <PanelLeftOpen size={17} />
                     Course videos
@@ -968,9 +968,9 @@ export function LearningWorkspace({
                   </div>
                 ) : null}
               </div>
-              <div className="mt-3 flex flex-col gap-3 rounded-md bg-[#fffdf8] px-1 py-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-3 flex flex-col gap-3 rounded-md bg-surface px-1 py-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-[#6c6257]">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-muted">
                     {playerReady ? (
                       <Check size={16} className="text-moss" />
                     ) : (
@@ -989,9 +989,9 @@ export function LearningWorkspace({
                     </span>
                   </div>
                   {showDownloadPanel ? (
-                    <div className="mt-2 min-h-[76px] max-w-md rounded-md border border-[#e1d9cc] bg-white px-3 py-2 shadow-sm">
+                    <div className="mt-2 min-h-[76px] max-w-md rounded-md border border-line bg-surface px-3 py-2 shadow-sm">
                       <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#6c6257]">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-muted">
                           {downloadStatus?.status === "ready"
                             ? "Downloaded video"
                             : downloadStatus?.status === "failed"
@@ -1016,7 +1016,7 @@ export function LearningWorkspace({
                               onClick={cancelDownload}
                               aria-label="Cancel download"
                               title="Cancel download"
-                              className="inline-flex h-7 items-center gap-1 rounded-md border border-[#c9c0b2] bg-white px-2 text-xs font-bold text-ink transition hover:bg-rust hover:text-white sm:h-6"
+                              className="inline-flex h-7 items-center gap-1 rounded-md border border-line-strong bg-surface px-2 text-xs font-bold text-ink transition hover:bg-rust hover:text-white sm:h-6"
                             >
                               <Square size={11} className="fill-current" />
                               Cancel
@@ -1024,7 +1024,7 @@ export function LearningWorkspace({
                           ) : null}
                         </span>
                       </div>
-                      <div className="h-2.5 overflow-hidden rounded-full bg-[#e8e1d6]">
+                      <div className="h-2.5 overflow-hidden rounded-full bg-track">
                         <div
                           className="h-full rounded-full bg-moss transition-[width] duration-500 ease-out"
                           style={{
@@ -1037,11 +1037,11 @@ export function LearningWorkspace({
                       </div>
                       {downloadStatus?.status === "ready" &&
                       formatBytes(downloadStatus.file_size_bytes) ? (
-                        <div className="mt-1.5 truncate font-mono text-xs leading-5 text-[#81776a]">
+                        <div className="mt-1.5 truncate font-mono text-xs leading-5 text-faint">
                           {formatBytes(downloadStatus.file_size_bytes)}
                         </div>
                       ) : downloadProgressDetail ? (
-                        <div className="mt-1.5 truncate font-mono text-xs leading-5 text-[#81776a]">
+                        <div className="mt-1.5 truncate font-mono text-xs leading-5 text-faint">
                           {downloadProgressDetail}
                         </div>
                       ) : downloadStatus?.error ? (
@@ -1052,7 +1052,7 @@ export function LearningWorkspace({
                     </div>
                   ) : null}
                   {downloadStatus && !showDownloadPanel ? (
-                    <div className="mt-0.5 text-xs leading-5 text-[#81776a]">
+                    <div className="mt-0.5 text-xs leading-5 text-faint">
                       {downloadStatus?.status === "ready" &&
                       formatBytes(downloadStatus.file_size_bytes) ? (
                         <span className="font-mono">
@@ -1074,7 +1074,7 @@ export function LearningWorkspace({
                     <button
                       type="button"
                       onClick={startDownload}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-[#2d2924] sm:h-9"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-invert px-3 text-xs font-bold text-white transition hover:bg-invert-hover sm:h-9"
                     >
                       {downloadBusy ? (
                         <Loader2 className="animate-spin" size={15} />
@@ -1088,7 +1088,7 @@ export function LearningWorkspace({
                     <button
                       type="button"
                       onClick={togglePreferredPlayer}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-xs font-bold text-ink transition hover:bg-cloud sm:h-9"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-3 text-xs font-bold text-ink transition hover:bg-cloud sm:h-9"
                     >
                       {localVideoActive ? <ExternalLink size={15} /> : <Download size={15} />}
                       {localVideoActive ? "Use YouTube" : "Use local"}
@@ -1099,7 +1099,7 @@ export function LearningWorkspace({
                         onClick={refreshDownloadStatus}
                         aria-label="Refresh download status"
                         title="Refresh download status"
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-line-strong bg-surface text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
                       >
                         {downloadBusy ? (
                           <Loader2 className="animate-spin" size={15} />
@@ -1128,7 +1128,7 @@ export function LearningWorkspace({
                         rel="noreferrer"
                         aria-label="Open on YouTube"
                         title="Open on YouTube"
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-line-strong bg-surface text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
                       >
                         <ExternalLink size={15} />
                       </a>
@@ -1136,7 +1136,7 @@ export function LearningWorkspace({
                     type="button"
                     onClick={() => setNotesOpen((open) => !open)}
                     aria-expanded={notesOpen}
-                    className="inline-flex h-11 items-center gap-2 rounded-md border border-[#c9c0b2] bg-white px-3 text-sm font-bold text-ink transition hover:bg-cloud sm:h-9"
+                    className="inline-flex h-11 items-center gap-2 rounded-md border border-line-strong bg-surface px-3 text-sm font-bold text-ink transition hover:bg-cloud sm:h-9"
                   >
                     <FileText size={17} />
                     Notes
@@ -1145,10 +1145,10 @@ export function LearningWorkspace({
                 </div>
               </div>
 
-              <div className={`mt-4 overflow-hidden rounded-xl border border-[#d8d1c3] bg-[#fffdf8] p-4 ${notesOpen ? "hidden xl:block" : ""}`}>
+              <div className={`mt-4 overflow-hidden rounded-xl border border-line bg-surface p-4 ${notesOpen ? "hidden xl:block" : ""}`}>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h2 className="text-lg font-black text-ink">Transcript</h2>
-                  <span className="text-sm font-semibold text-[#6c6257]">
+                  <span className="text-sm font-semibold text-muted">
                     {transcriptSegments.length} segments
                   </span>
                 </div>
@@ -1156,14 +1156,14 @@ export function LearningWorkspace({
                 <div className="relative mb-3">
                   <Search
                     size={15}
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#81776a]"
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
                   />
                   <input
                     type="text"
                     value={transcriptQuery}
                     onChange={(event) => setTranscriptQuery(event.target.value)}
                     placeholder="Search transcript…"
-                    className="h-10 w-full rounded-md border border-[#c9c0b2] bg-white pl-9 pr-9 text-sm text-ink outline-none transition placeholder:text-[#a89e90] focus:border-rust"
+                    className="h-10 w-full rounded-md border border-line-strong bg-surface pl-9 pr-9 text-sm text-ink outline-none transition placeholder:text-placeholder focus:border-rust"
                   />
                   {transcriptSearchBusy ? (
                     <Loader2
@@ -1176,7 +1176,7 @@ export function LearningWorkspace({
                       onClick={() => setTranscriptQuery("")}
                       aria-label="Clear transcript search"
                       title="Clear transcript search"
-                      className="absolute right-1.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-[#81776a] transition hover:bg-cloud hover:text-ink"
+                      className="absolute right-1.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-faint transition hover:bg-cloud hover:text-ink"
                     >
                       <X size={15} />
                     </button>
@@ -1184,12 +1184,12 @@ export function LearningWorkspace({
                 </div>
 
                 {transcriptSegments.length === 0 && !transcriptQuery.trim() ? (
-                  <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-[#c9c0b2] bg-paper px-4 text-center text-sm font-semibold text-[#6c6257]">
+                  <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-line-strong bg-paper px-4 text-center text-sm font-semibold text-muted">
                     <span>No English transcript is stored for this video yet.</span>
                     <button
                       type="button"
                       onClick={refreshTranscript}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-moss sm:h-10"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-invert px-3 text-xs font-bold text-white transition hover:bg-moss sm:h-10"
                     >
                       {transcriptBusy ? (
                         <Loader2 className="animate-spin" size={15} />
@@ -1200,14 +1200,14 @@ export function LearningWorkspace({
                     </button>
                   </div>
                 ) : (
-                  <div className="overflow-hidden rounded-lg border border-[#d8d1c3] bg-white">
+                  <div className="overflow-hidden rounded-lg border border-line bg-surface">
                     <div
                       ref={transcriptListRef}
                       className="hover-scrollbar max-h-[52vh] overflow-y-auto md:max-h-[38vh] xl:max-h-[360px]"
                     >
                       {transcriptQuery.trim() ? (
                         transcriptSearchResults.length === 0 ? (
-                          <div className="px-4 py-6 text-center text-sm font-semibold text-[#6c6257]">
+                          <div className="px-4 py-6 text-center text-sm font-semibold text-muted">
                             {transcriptSearchBusy ? "Searching…" : "No matches"}
                           </div>
                         ) : (
@@ -1221,15 +1221,15 @@ export function LearningWorkspace({
                                 key={segment.id}
                                 type="button"
                                 onClick={() => seekTo(segment.start_seconds)}
-                                className="grid w-full grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-[#eee9de] px-3 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud sm:grid-cols-[72px_minmax(0,1fr)] sm:px-4"
+                                className="grid w-full grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-rowline px-3 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud sm:grid-cols-[72px_minmax(0,1fr)] sm:px-4"
                               >
                                 <span className="font-mono font-bold text-rust">
                                   {formatTimestamp(segment.start_seconds)}
                                 </span>
-                                <span className="leading-relaxed text-[#312c27]">
+                                <span className="leading-relaxed text-body">
                                   {highlighted.before}
                                   {highlighted.match ? (
-                                    <mark className="rounded-sm bg-[#f5e6b8] px-0.5 font-semibold">
+                                    <mark className="rounded-sm bg-mark px-0.5 font-semibold">
                                       {highlighted.match}
                                     </mark>
                                   ) : null}
@@ -1252,14 +1252,14 @@ export function LearningWorkspace({
                             }}
                             type="button"
                             onClick={() => seekTo(segment.start_seconds)}
-                            className={`grid w-full grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-[#eee9de] px-3 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud sm:grid-cols-[72px_minmax(0,1fr)] sm:px-4 ${
+                            className={`grid w-full grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-rowline px-3 py-3 text-left text-sm transition last:border-b-0 hover:bg-cloud sm:grid-cols-[72px_minmax(0,1fr)] sm:px-4 ${
                               index === activeTranscriptIndex ? "bg-cloud" : ""
                             }`}
                           >
                             <span className="font-mono font-bold text-rust">
                               {formatTimestamp(segment.start_seconds)}
                             </span>
-                            <span className="leading-relaxed text-[#312c27]">{segment.text}</span>
+                            <span className="leading-relaxed text-body">{segment.text}</span>
                           </button>
                         ))
                       )}
@@ -1278,7 +1278,7 @@ export function LearningWorkspace({
                   title="Resize notes pane"
                   className="absolute left-0 top-0 z-10 hidden h-full w-3 -translate-x-1/2 cursor-col-resize items-center justify-center outline-none xl:flex"
                 >
-                  <span className="h-12 w-1 rounded-full bg-[#c9c0b2] opacity-0 transition hover:opacity-100" />
+                  <span className="h-12 w-1 rounded-full bg-line-strong opacity-0 transition hover:opacity-100" />
                 </button>
                 <NoteEditor videoId={video.id} initialNote={initialNote} onSeek={seekTo} />
               </div>

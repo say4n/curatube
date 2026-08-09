@@ -58,7 +58,7 @@ export function ExportNotesButtons({ playlistId, playlistTitle }: Props) {
         disabled={copying}
         aria-label={playlistTitle ? `Copy notes for ${playlistTitle}` : "Copy notes to clipboard"}
         title="Copy notes to clipboard"
-        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60 sm:h-9 sm:w-9"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-line-strong bg-surface text-ink transition hover:bg-cloud disabled:cursor-not-allowed disabled:opacity-60 sm:h-9 sm:w-9"
       >
         {copied ? (
           <Check size={16} className="text-moss" />
@@ -73,7 +73,7 @@ export function ExportNotesButtons({ playlistId, playlistTitle }: Props) {
         download
         aria-label={playlistTitle ? `Download notes for ${playlistTitle}` : "Download notes"}
         title="Download notes"
-        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#c9c0b2] bg-white text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-line-strong bg-surface text-ink transition hover:bg-cloud sm:h-9 sm:w-9"
       >
         <Download size={16} />
       </a>

@@ -3,9 +3,57 @@
 @tailwind utilities;
 
 :root {
+  --color-ink: 23 23 23;
+  --color-paper: 247 244 239;
+  --color-surface: 255 253 248;
+  --color-cloud: 236 232 223;
+  --color-moss: 83 107 85;
+  --color-rust: 155 79 54;
+  --color-invert: 23 23 23;
+  --color-invert-hover: 45 41 36;
+  --color-line: 216 209 195;
+  --color-line-strong: 201 192 178;
+  --color-muted: 108 98 87;
+  --color-faint: 129 119 106;
+  --color-placeholder: 168 158 144;
+  --color-soft: 65 58 51;
+  --color-body: 49 44 39;
+  --color-track: 232 225 214;
+  --color-rowline: 238 233 222;
+  --color-mark: 245 230 184;
+  --color-code-bg: 23 23 23;
+  --color-code-text: 247 244 239;
+  --color-scrollbar: 201 192 178;
+  --color-scrollbar-hover: 138 129 117;
   color-scheme: light;
-  background: #f7f4ef;
-  color: #171717;
+  background: rgb(var(--color-paper));
+  color: rgb(var(--color-ink));
+}
+
+.dark {
+  --color-ink: 236 230 220;
+  --color-paper: 22 21 19;
+  --color-surface: 30 28 25;
+  --color-cloud: 42 40 35;
+  --color-moss: 111 144 115;
+  --color-rust: 194 106 76;
+  --color-invert: 35 32 28;
+  --color-invert-hover: 55 51 45;
+  --color-line: 55 52 46;
+  --color-line-strong: 74 70 61;
+  --color-muted: 165 157 144;
+  --color-faint: 139 131 119;
+  --color-placeholder: 109 103 93;
+  --color-soft: 213 205 193;
+  --color-body: 224 217 205;
+  --color-track: 51 48 42;
+  --color-rowline: 44 42 37;
+  --color-mark: 93 79 36;
+  --color-code-bg: 14 13 11;
+  --color-code-text: 230 224 213;
+  --color-scrollbar: 74 70 61;
+  --color-scrollbar-hover: 93 87 76;
+  color-scheme: dark;
 }
 
 * {
@@ -17,9 +65,9 @@ body {
   min-height: 100dvh;
   margin: 0;
   background:
-    linear-gradient(180deg, rgba(247, 244, 239, 0.92), rgba(247, 244, 239, 1)),
-    #f7f4ef;
-  color: #171717;
+    linear-gradient(180deg, rgb(var(--color-paper) / 0.92), rgb(var(--color-paper))),
+    rgb(var(--color-paper));
+  color: rgb(var(--color-ink));
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -91,14 +139,14 @@ iframe {
 }
 
 .hover-scrollbar {
-  scrollbar-color: transparent transparent;
+  scrollbar-color: rgb(var(--color-scrollbar)) transparent;
   scrollbar-width: thin;
 }
 
 .hover-scrollbar:hover,
 .hover-scrollbar:focus,
 .hover-scrollbar:focus-within {
-  scrollbar-color: #c9c0b2 transparent;
+  scrollbar-color: rgb(var(--color-scrollbar)) transparent;
 }
 
 .hover-scrollbar::-webkit-scrollbar-thumb {
@@ -111,12 +159,12 @@ iframe {
 .hover-scrollbar:hover::-webkit-scrollbar-thumb,
 .hover-scrollbar:focus::-webkit-scrollbar-thumb,
 .hover-scrollbar:focus-within::-webkit-scrollbar-thumb {
-  background: #c9c0b2;
+  background: rgb(var(--color-scrollbar));
   background-clip: padding-box;
 }
 
 .hover-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #8a8175;
+  background: rgb(var(--color-scrollbar-hover));
   background-clip: padding-box;
 }
 
@@ -160,15 +208,15 @@ iframe {
 
 .prose-note code {
   border-radius: 4px;
-  background: #ece8df;
+  background: rgb(var(--color-cloud));
   padding: 0.1rem 0.3rem;
 }
 
 .prose-note pre {
   overflow-x: auto;
   border-radius: 8px;
-  background: #171717;
-  color: #f7f4ef;
+  background: rgb(var(--color-code-bg));
+  color: rgb(var(--color-code-text));
   padding: 0.75rem;
 }
 
@@ -204,6 +252,6 @@ iframe {
 
 .prose-note th,
 .prose-note td {
-  border: 1px solid #d8d1c3;
+  border: 1px solid rgb(var(--color-line));
   padding: 0.35rem 0.5rem;
 }
