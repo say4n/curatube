@@ -19,6 +19,10 @@ const preferredDownloadFormat =
   "bv*[height<=1440][fps<=60]+ba/" +
   "b[height<=1440][fps<=60]/" +
   "bv*[height<=1440]+ba/b[height<=1440]/bv*+ba/best";
+// YouTube sometimes throttles specific IPs for fragmented DASH streams
+// (HTTP 403 mid-transfer), especially multi-audio videos, while progressive
+// combined formats still download. Fall back to those when DASH is blocked.
+const fallbackDownloadFormat = "b/best";
 
 function now() {
   return new Date().toISOString();
@@ -428,6 +432,15 @@ async function removeIncompleteDownloads(video: Video) {
   }
 }
 
+async function clearDownloadDirectory(directory: string) {
+  const entries = await fsp.readdir(directory, { withFileTypes: true }).catch(() => []);
+  await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() || entry.isDirectory())
+      .map((entry) => fsp.rm(path.join(directory, entry.name), { recursive: true, force: true }))
+  );
+}
+
 export async function cancelVideoDownload(videoId: string) {
   abortedDownloads.add(videoId);
 
@@ -468,6 +481,51 @@ export async function cancelVideoDownload(videoId: string) {
   return getVideoDownload(videoId)!;
 }
 
+async function downloadWithFormat(
+  videoId: string,
+  video: Video,
+  downloadDirectory: string,
+  format: string
+) {
+  await runYtDlp(
+    videoId,
+    [
+      "--newline",
+      "--no-playlist",
+      "--continue",
+      "--restrict-filenames",
+      "--windows-filenames",
+      "--plugin-dirs",
+      "/opt/yt-dlp-plugins",
+      "--extractor-args",
+      "youtube:player_client=mweb",
+      "-f",
+      format,
+      "--merge-output-format",
+      "webm/mp4",
+      "--progress-template",
+      "download:curatube-progress:%(progress._percent_str)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.speed)s|%(progress.eta)s",
+      "-o",
+      path.join(downloadDirectory, "%(title).180B [%(id)s].%(ext)s"),
+      videoUrl(video.youtube_id)
+    ],
+    (line) => {
+      if (abortedDownloads.has(videoId)) return;
+      const progress = parseDownloadProgress(line);
+      if (progress) setDownload(videoId, progress);
+    }
+  );
+  if (abortedDownloads.has(videoId)) return null;
+
+  const downloadedFile = await findDownloadedFile(downloadDirectory);
+  if (!downloadedFile) {
+    throw new Error("yt-dlp completed but no playable video file was found.");
+  }
+  if (abortedDownloads.has(videoId)) return null;
+
+  return optimizeFileForStreaming(downloadedFile.filePath);
+}
+
 async function runVideoDownload(videoId: string) {
   const video = getVideo(videoId);
   if (!video) return;
@@ -497,53 +555,35 @@ async function runVideoDownload(videoId: string) {
       error: null
     });
 
-    await runYtDlp(
-      videoId,
-      [
-        "--newline",
-        "--no-playlist",
-        "--continue",
-        "--restrict-filenames",
-        "--windows-filenames",
-        "--plugin-dirs",
-        "/opt/yt-dlp-plugins",
-        "--extractor-args",
-        "youtube:player_client=mweb",
-        "-f",
-        preferredDownloadFormat,
-        "--merge-output-format",
-        "webm/mp4",
-        "--progress-template",
-        "download:curatube-progress:%(progress._percent_str)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.speed)s|%(progress.eta)s",
-        "-o",
-        path.join(downloadDirectory, "%(title).180B [%(id)s].%(ext)s"),
-        videoUrl(video.youtube_id)
-      ],
-      (line) => {
-        if (abortedDownloads.has(videoId)) return;
-        const progress = parseDownloadProgress(line);
-        if (progress) setDownload(videoId, progress);
+    // Prefer a single VP9 + Opus WebM via DASH; fall back to progressive
+    // combined formats when YouTube throttles fragmented DASH streams (403).
+    let playableFilePath: string | null = null;
+    let primaryError: unknown = null;
+    try {
+      playableFilePath = await downloadWithFormat(videoId, video, downloadDirectory, preferredDownloadFormat);
+    } catch (error) {
+      primaryError = error;
+    }
+
+    if (abortedDownloads.has(videoId)) {
+      abortedDownloads.delete(videoId);
+      return;
+    }
+
+    if (!playableFilePath) {
+      await clearDownloadDirectory(downloadDirectory);
+      try {
+        playableFilePath = await downloadWithFormat(videoId, video, downloadDirectory, fallbackDownloadFormat);
+      } catch (error) {
+        throw primaryError ?? error;
       }
-    );
-    if (abortedDownloads.has(videoId)) {
-      abortedDownloads.delete(videoId);
-      return;
+      if (abortedDownloads.has(videoId)) {
+        abortedDownloads.delete(videoId);
+        return;
+      }
+      if (!playableFilePath) return;
     }
 
-    const downloadedFile = await findDownloadedFile(downloadDirectory);
-    if (!downloadedFile) {
-      throw new Error("yt-dlp completed but no playable video file was found.");
-    }
-    if (abortedDownloads.has(videoId)) {
-      abortedDownloads.delete(videoId);
-      return;
-    }
-
-    const playableFilePath = await optimizeFileForStreaming(downloadedFile.filePath);
-    if (abortedDownloads.has(videoId)) {
-      abortedDownloads.delete(videoId);
-      return;
-    }
     const playableStats = await fsp.stat(playableFilePath);
 
     setDownload(videoId, {
