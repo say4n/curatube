@@ -4,6 +4,8 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 ENV NEXT_TELEMETRY_DISABLED=1
 
+ENV BGUTIL_POT_VERSION=1.3.1
+
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -18,6 +20,21 @@ RUN apt-get update \
   # The standalone yt-dlp binary bundles the yt-dlp-ejs solver scripts but
   # needs a supported JS runtime (deno by default) on PATH to run them.
   && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
+  # Install the bgutil Proof-of-Origin token provider plugin and its
+  # deno-based generation script. YouTube enforces PO tokens for GVS
+  # (video-stream) requests; without one, medium/large downloads fail with
+  # HTTP 403 mid-transfer. The script lives at the plugin's default home dir
+  # and is invoked per download via deno.
+  && mkdir -p /opt/yt-dlp-plugins /root/bgutil-ytdlp-pot-provider/server \
+  && curl -fsSL -o /opt/yt-dlp-plugins/bgutil-ytdlp-pot-provider.zip \
+    "https://github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/download/${BGUTIL_POT_VERSION}/bgutil-ytdlp-pot-provider.zip" \
+  && curl -fsSL -o /tmp/bgutil.tgz \
+    "https://codeload.github.com/Brainicism/bgutil-ytdlp-pot-provider/tar.gz/${BGUTIL_POT_VERSION}" \
+  && tar -xzf /tmp/bgutil.tgz -C /root/bgutil-ytdlp-pot-provider/server --strip-components=2 \
+      "bgutil-ytdlp-pot-provider-${BGUTIL_POT_VERSION}/server" \
+  && rm -f /tmp/bgutil.tgz \
+  && cd /root/bgutil-ytdlp-pot-provider/server \
+  && deno install --allow-scripts=npm:canvas --frozen \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

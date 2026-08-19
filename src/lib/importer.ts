@@ -157,7 +157,17 @@ export function createImportJob(sourceUrl: string) {
 async function fetchPlaylist(sourceUrl: string) {
   const { stdout } = await execFileAsync(
     "yt-dlp",
-    ["--dump-single-json", "--flat-playlist", "--no-warnings", "--skip-download", sourceUrl],
+    [
+      "--dump-single-json",
+      "--flat-playlist",
+      "--no-warnings",
+      "--skip-download",
+      "--plugin-dirs",
+      "/opt/yt-dlp-plugins",
+      "--extractor-args",
+      "youtube:player_client=mweb",
+      sourceUrl
+    ],
     { maxBuffer: 64 * 1024 * 1024 }
   );
 
@@ -227,6 +237,10 @@ export async function fetchTranscript(youtubeId: string) {
       "en-US,en-orig,en.*,en",
       "--sub-format",
       "vtt",
+      "--plugin-dirs",
+      "/opt/yt-dlp-plugins",
+      "--extractor-args",
+      "youtube:player_client=mweb",
       "-o",
       path.join(tempDir, "%(id)s.%(ext)s"),
       videoUrl(youtubeId)
