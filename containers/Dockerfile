@@ -10,9 +10,14 @@ RUN apt-get update \
     curl \
     ffmpeg \
     python3 \
+    unzip \
   && corepack enable \
   && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
   && chmod +x /usr/local/bin/yt-dlp \
+  # Deno is the JS runtime yt-dlp uses to solve YouTube's JS challenges.
+  # The standalone yt-dlp binary bundles the yt-dlp-ejs solver scripts but
+  # needs a supported JS runtime (deno by default) on PATH to run them.
+  && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
