@@ -30,7 +30,7 @@ xcodebuild -project ios/Curatube.xcodeproj \
            build
 # install + launch:
 xcrun simctl install booted ios/build/Build/Products/Debug-iphonesimulator/Curatube.app
-xcrun simctl launch booted dev.say4n.Curatube
+xcrun simctl launch booted sayan.page.Curatube
 ```
 
 Or open `ios/Curatube.xcodeproj` in Xcode and run from there. The scheme

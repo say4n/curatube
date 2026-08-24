@@ -142,7 +142,7 @@ struct AuthWebView: UIViewRepresentable {
 }
 
 private enum Log {
-    static let auth = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "dev.say4n.Curatube", category: "auth-webview")
+    static let auth = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "sayan.page.Curatube", category: "auth-webview")
 }
 
 struct AuthScreen: View {
