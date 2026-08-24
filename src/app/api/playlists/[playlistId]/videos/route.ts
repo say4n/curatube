@@ -17,6 +17,9 @@ export async function GET(
 
   return NextResponse.json({
     videos: getPlaylistVideos(playlistId),
-    progress: getPlaylistVideoProgress(playlistId)
+    progress: getPlaylistVideoProgress(playlistId).map((row) => ({
+      ...row,
+      completed: row.completed === 1
+    }))
   });
 }
