@@ -16,6 +16,7 @@ final class PlaybackController {
 
     private var timeObserver: Any?
     private var lastSentPosition: Double = 0
+    private var seekObservation: NSKeyValueObservation?
 
     init(client: APIClient, video: Video, url: URL) {
         self.client = client
@@ -39,7 +40,55 @@ final class PlaybackController {
         newPlayer.automaticallyWaitsToMinimizeStalling = true
         player = newPlayer
         observe(newPlayer)
+        resumeFromSavedProgress(player: newPlayer)
         newPlayer.play()
+    }
+
+    /// Seeks to the last saved position so playback resumes instead of starting
+    /// from the beginning.
+    private func resumeFromSavedProgress(player: AVPlayer) {
+        let videoID = video.id
+        Task { @MainActor [weak self] in
+            guard let self, let progress = try? await self.client.fetchProgress(videoID: videoID) else { return }
+            let position = progress.positionSeconds ?? 0
+            let duration = progress.durationSeconds ?? 0
+            guard !progress.completed else { return }
+            if duration > 0 && position / duration >= 0.95 { return }
+            guard position >= 1 else { return }
+            await self.seek(whenReady: player, to: position)
+        }
+    }
+
+    @MainActor
+    private func seek(whenReady player: AVPlayer, to seconds: Double) async {
+        guard let item = player.currentItem else { return }
+        let seek = { [weak self] in
+            player.seek(
+                to: CMTime(seconds: seconds, preferredTimescale: 600),
+                toleranceBefore: .zero,
+                toleranceAfter: .zero
+            )
+            self?.lastSentPosition = seconds
+        }
+        if item.status == .readyToPlay {
+            seek()
+            return
+        }
+        seekObservation?.invalidate()
+        seekObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+            guard item.status == .readyToPlay else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.seekObservation?.invalidate()
+                self.seekObservation = nil
+                player.seek(
+                    to: CMTime(seconds: seconds, preferredTimescale: 600),
+                    toleranceBefore: .zero,
+                    toleranceAfter: .zero
+                )
+                self.lastSentPosition = seconds
+            }
+        }
     }
 
     func togglePlay() {
@@ -92,7 +141,10 @@ final class PlaybackController {
 
     private func syncPosition(currentTime: Double) {
         guard currentTime.isFinite, currentTime >= 0 else { return }
-        guard abs(currentTime - lastSentPosition) >= 3 || currentTime == 0 else { return }
+        guard abs(currentTime - lastSentPosition) >= 3 else { return }
+        // Ignore sub-second playbacks right after a resume so a quick
+        // open/close doesn't wipe the saved position back to 0.
+        if currentTime < 1 && lastSentPosition >= 1 { return }
         lastSentPosition = currentTime
         let completed = duration > 0 && currentTime / duration >= 0.95
         let videoID = video.id
@@ -381,6 +433,7 @@ struct TranscriptView: View {
     @Environment(APIClient.self) private var client
     @State private var segments: [TranscriptSegment] = []
     @State private var error: String?
+    @State private var didLoad = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -390,32 +443,38 @@ struct TranscriptView: View {
                 Text(error)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-            } else if segments.isEmpty {
+            } else if !didLoad {
                 ProgressView("Loading transcript…")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+            } else if segments.isEmpty {
+                Text("No transcript available for this video.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             } else {
-                ForEach(segments) { segment in
-                    Button {
-                        playback.seek(to: segment.startSeconds)
-                    } label: {
-                        HStack(alignment: .top, spacing: 10) {
-                            Text(Formatters.duration(Int(segment.startSeconds)) ?? "0:00")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(isActive(segment) ? Color.accentColor : .secondary)
-                                .frame(width: 44, alignment: .leading)
-                            Text(segment.text)
-                                .font(.footnote)
-                                .foregroundStyle(isActive(segment) ? .primary : .secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(segments) { segment in
+                        Button {
+                            playback.seek(to: segment.startSeconds)
+                        } label: {
+                            HStack(alignment: .top, spacing: 10) {
+                                Text(Formatters.duration(Int(segment.startSeconds)) ?? "0:00")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(isActive(segment) ? Color.accentColor : .secondary)
+                                    .frame(width: 44, alignment: .leading)
+                                Text(segment.text)
+                                    .font(.footnote)
+                                    .foregroundStyle(isActive(segment) ? .primary : .secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
-        .task { await load() }
+        .task(id: video.id) { await load() }
     }
 
     private func isActive(_ segment: TranscriptSegment) -> Bool {
@@ -428,11 +487,43 @@ struct TranscriptView: View {
 
     private func load() async {
         error = nil
+        didLoad = false
         do {
             segments = try await client.fetchTranscript(videoID: video.id)
         } catch let fetchError {
             let message = (fetchError as? LocalizedError)?.errorDescription ?? fetchError.localizedDescription
             error = message
         }
+        didLoad = true
+        if segments.count > 200 {
+            // Long videos can have thousands of fine-grained segments; dedupe
+            // near-duplicate lines so the list stays scannable.
+            segments = Self.collapsed(segments, maxCount: 500)
+        }
+    }
+
+    /// Collapses micro-segments (e.g. per-word auto-captions) into readable
+    /// lines while preserving their timestamps.
+    static func collapsed(_ segments: [TranscriptSegment], maxCount: Int) -> [TranscriptSegment] {
+        guard segments.count > maxCount else { return segments }
+        let bucketCount = min(maxCount, segments.count)
+        let perBucket = segments.count / bucketCount
+        var result: [TranscriptSegment] = []
+        var index = 0
+        while index < segments.count {
+            let end = min(index + perBucket, segments.count)
+            let bucket = segments[index..<end]
+            let text = bucket.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            let start = bucket.first?.startSeconds ?? 0
+            let duration = bucket.last.map { $0.startSeconds + ($0.durationSeconds ?? 0) - start } ?? 0
+            result.append(TranscriptSegment(
+                id: index,
+                startSeconds: start,
+                durationSeconds: duration,
+                text: text
+            ))
+            index = end
+        }
+        return result
     }
 }

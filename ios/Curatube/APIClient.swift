@@ -141,6 +141,12 @@ final class APIClient {
         return try Self.decoder.decode(TranscriptResponse.self, from: data).transcript
     }
 
+    func fetchProgress(videoID: String) async throws -> VideoProgress? {
+        let path = "/api/videos/\(Self.pathSegment(videoID))/progress"
+        let data = try await perform(URLRequest(url: try apiEndpoint(path)))
+        return try Self.decoder.decode(SingleVideoProgressResponse.self, from: data).progress
+    }
+
     func fetchDownloadStatus(videoID: String) async throws -> DownloadStatus {
         let path = "/api/videos/\(Self.pathSegment(videoID))/download"
         let data = try await perform(URLRequest(url: try apiEndpoint(path)))

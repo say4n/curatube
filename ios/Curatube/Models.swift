@@ -59,11 +59,44 @@ struct VideoProgress: Codable, Hashable {
     let positionSeconds: Double?
     let durationSeconds: Double?
     let completed: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case videoID
+        case positionSeconds
+        case durationSeconds
+        case completed
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        videoID = try container.decode(String.self, forKey: .videoID)
+        positionSeconds = try container.decodeIfPresent(Double.self, forKey: .positionSeconds)
+        durationSeconds = try container.decodeIfPresent(Double.self, forKey: .durationSeconds)
+        if let flag = try? container.decode(Bool.self, forKey: .completed) {
+            completed = flag
+        } else if let flag = try? container.decode(Int.self, forKey: .completed) {
+            completed = flag != 0
+        } else {
+            completed = false
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(videoID, forKey: .videoID)
+        try container.encodeIfPresent(positionSeconds, forKey: .positionSeconds)
+        try container.encodeIfPresent(durationSeconds, forKey: .durationSeconds)
+        try container.encode(completed, forKey: .completed)
+    }
 }
 
 struct PlaylistVideosResponse: Codable {
     let videos: [Video]
     let progress: [VideoProgress]
+}
+
+struct SingleVideoProgressResponse: Codable {
+    let progress: VideoProgress?
 }
 
 struct TranscriptSegment: Codable, Identifiable, Hashable {
