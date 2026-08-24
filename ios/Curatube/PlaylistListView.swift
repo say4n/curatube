@@ -16,7 +16,13 @@ struct PlaylistListView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if let loadError {
+                if client.baseURL == nil {
+                    ContentUnavailableView {
+                        Label("Server not configured", systemImage: "server.rack")
+                    } description: {
+                        Text("Open the Server tab and enter your Curatube instance URL to get started.")
+                    }
+                } else if let loadError {
                     ContentUnavailableView {
                         Label("Can't reach server", systemImage: "wifi.exclamationmark")
                     } description: {

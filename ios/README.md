@@ -39,10 +39,11 @@ to run on a device).
 
 ## Notes
 
-- Default server URL is `https://yt.sayan.page`; change it in the **Server**
-  tab. That endpoint is behind Authelia SSO, so on first use the app presents an
-  in-app login and copies the session cookie into URLSession's shared cookie
-  storage. Local self-hosted instances (plain HTTP on a LAN) work too.
+- There is no default server; set yours in the **Server** tab (persisted in
+  `UserDefaults`). For a self-hosted Authelia-protected instance the app
+  presents an in-app login and copies the session cookie into URLSession's
+  shared cookie storage. Local self-hosted instances (plain HTTP on a LAN)
+  work too.
 - Offline videos live in `Application Support/OfflineVideos` and are tracked by
   an `index.json`; deleting an entry removes the file. `URLSessionDownloadTask`
   reports progress via the server's `Accept-Ranges: bytes` support.

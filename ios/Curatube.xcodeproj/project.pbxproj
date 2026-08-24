@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXFileReference section */
@@ -12,15 +12,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A1A1A1A1A1A1A1A1A1A1A103 /* Curatube */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = Curatube;
-			sourceTree = "<group>";
-		};
+		A1A1A1A1A1A1A1A1A1A1A103 /* Curatube */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Curatube; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,7 +93,6 @@
 			);
 			mainGroup = A1A1A1A1A1A1A1A1A1A1A105;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			productRefGroup = A1A1A1A1A1A1A1A1A1A1A106 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -253,6 +244,7 @@
 				"CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YT3W576VWV;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -280,6 +272,7 @@
 				"CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YT3W576VWV;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -304,20 +297,20 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A1A1A1A1A1A1A1A1A1A1A10C /* Build configuration list for PBXProject "Curatube" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A1A1A1A1A1A1A1A1A1A1A10D /* Debug */,
-				A1A1A1A1A1A1A1A1A1A1A10E /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		A1A1A1A1A1A1A1A1A1A1A108 /* Build configuration list for PBXNativeTarget "Curatube" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A1A1A1A1A1A1A1A1A1A1A10F /* Debug */,
 				A1A1A1A1A1A1A1A1A1A1A110 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1A1A1A1A1A1A1A1A1A1A10C /* Build configuration list for PBXProject "Curatube" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1A1A1A1A1A1A1A1A1A1A10D /* Debug */,
+				A1A1A1A1A1A1A1A1A1A1A10E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

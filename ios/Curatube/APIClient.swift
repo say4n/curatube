@@ -4,8 +4,6 @@ import Observation
 @MainActor
 @Observable
 final class APIClient {
-    static let defaultServerURL = "https://yt.sayan.page"
-
     private static let serverURLKey = "curatube.serverBaseURL"
 
     var baseURLString: String {
@@ -26,8 +24,7 @@ final class APIClient {
     }()
 
     init() {
-        baseURLString = UserDefaults.standard.string(forKey: Self.serverURLKey)
-            ?? Self.defaultServerURL
+        baseURLString = UserDefaults.standard.string(forKey: Self.serverURLKey) ?? ""
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
