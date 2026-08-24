@@ -19,6 +19,13 @@ struct RootView: View {
     @Environment(APIClient.self) private var client
     @Environment(OfflineLibrary.self) private var offlineLibrary
 
+    private var authRequired: Binding<Bool> {
+        Binding(
+            get: { client.needsAuth },
+            set: { client.needsAuth = $0 }
+        )
+    }
+
     var body: some View {
         TabView {
             PlaylistListView()
@@ -27,6 +34,9 @@ struct RootView: View {
                 .tabItem { Label("Downloads", systemImage: "arrow.down.circle") }
             SettingsView()
                 .tabItem { Label("Server", systemImage: "server.rack") }
+        }
+        .sheet(isPresented: authRequired) {
+            AuthScreen()
         }
     }
 }

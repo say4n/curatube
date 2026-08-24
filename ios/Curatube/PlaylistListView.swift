@@ -6,13 +6,6 @@ struct PlaylistListView: View {
     @State private var playlists: [Playlist] = []
     @State private var loadError: String?
 
-    private var authRequired: Binding<Bool> {
-        Binding(
-            get: { client.needsAuth },
-            set: { client.needsAuth = $0 }
-        )
-    }
-
     var body: some View {
         NavigationStack {
             Group {
@@ -57,9 +50,6 @@ struct PlaylistListView: View {
             }
             .navigationDestination(for: Playlist.self) { playlist in
                 VideoListView(playlist: playlist)
-            }
-            .sheet(isPresented: authRequired) {
-                AuthScreen()
             }
         }
     }
