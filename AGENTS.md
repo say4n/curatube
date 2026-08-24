@@ -48,3 +48,23 @@ docker build -f containers/Dockerfile -t curatube:latest .
 - The YouTube iframe API mutates its host DOM. Keep React ownership separated
   from the API-owned player node when switching between embedded and local
   playback.
+- **Do NOT create a top-level `app/` directory.** A root `app/` folder breaks
+  Next.js App Router detection (every route, including `/`, 404s) even though
+  app routes live under `src/app`. The native iOS app lives in `ios/` instead.
+
+## iOS App (`ios/`)
+
+- Native SwiftUI companion (browse, SSO login, streaming, offline playback);
+  the server remains the download engine. View files in `ios/Curatube/`, a
+  hand-maintained Xcode 16+ synchronized-folder project (no XcodeGen/Tuist; new
+  `.swift` files are picked up automatically).
+- JSON endpoints added for the app: `GET /api/playlists` and
+  `GET /api/playlists/:id/videos` (web UI still uses RSC pages).
+- Build (host, macOS only — Docker can't build iOS):
+
+```sh
+xcodebuild -project ios/Curatube.xcodeproj \
+  -scheme Curatube \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -derivedDataPath ios/build build
+```
