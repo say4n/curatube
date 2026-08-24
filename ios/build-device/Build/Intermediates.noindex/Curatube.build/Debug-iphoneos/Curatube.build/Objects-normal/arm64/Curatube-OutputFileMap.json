@@ -1,0 +1,129 @@
+{
+  "" : {
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Curatube-primary.dia",
+    "emit-module-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Curatube-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Curatube-primary-emit-module.dia",
+    "pch" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Curatube-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Curatube-primary.swiftdeps"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/APIClient.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/APIClient.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/APIClient.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/APIClient.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/APIClient.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/APIClient.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/APIClient.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/APIClient.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/APIClient~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/AuthWebView.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/AuthWebView.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/AuthWebView.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/AuthWebView.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/AuthWebView.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/AuthWebView.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/AuthWebView.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/AuthWebView.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/AuthWebView~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/CuratubeApp.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/CuratubeApp.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/CuratubeApp.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/CuratubeApp.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/CuratubeApp.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/CuratubeApp.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/CuratubeApp.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/CuratubeApp.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/CuratubeApp~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/Formatting.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Formatting.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Formatting.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Formatting.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Formatting.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Formatting.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Formatting.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Formatting.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Formatting~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/Models.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Models.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Models.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Models.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Models.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Models.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Models.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Models.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/Models~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/OfflineLibrary.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibrary.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibrary.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibrary.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibrary.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibrary.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibrary.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibrary.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibrary~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/OfflineLibraryView.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibraryView.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibraryView.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibraryView.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibraryView.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibraryView.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibraryView.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibraryView.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/OfflineLibraryView~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/PlayerScreen.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlayerScreen.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlayerScreen.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlayerScreen.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlayerScreen.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlayerScreen.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlayerScreen.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlayerScreen.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlayerScreen~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/PlaylistListView.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlaylistListView.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlaylistListView.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlaylistListView.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlaylistListView.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlaylistListView.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlaylistListView.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlaylistListView.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/PlaylistListView~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/RemoteThumb.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/RemoteThumb.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/RemoteThumb.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/RemoteThumb.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/RemoteThumb.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/RemoteThumb.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/RemoteThumb.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/RemoteThumb.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/RemoteThumb~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/SettingsView.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/SettingsView.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/SettingsView.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/SettingsView.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/SettingsView.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/SettingsView~partial.swiftmodule"
+  },
+  "/Users/sayan/Projects/curatube/ios/Curatube/VideoListView.swift" : {
+    "const-values" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/VideoListView.swiftconstvalues",
+    "dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/VideoListView.d",
+    "diagnostics" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/VideoListView.dia",
+    "index-unit-output-path" : "/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/VideoListView.o",
+    "llvm-bc" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/VideoListView.bc",
+    "object" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/VideoListView.o",
+    "swift-dependencies" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/VideoListView.swiftdeps",
+    "swiftmodule" : "/Users/sayan/Projects/curatube/ios/build-device/Build/Intermediates.noindex/Curatube.build/Debug-iphoneos/Curatube.build/Objects-normal/arm64/VideoListView~partial.swiftmodule"
+  }
+}

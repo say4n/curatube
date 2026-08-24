@@ -1,0 +1,96 @@
+{
+  "source": "/Users/sayan/Projects/curatube/ios/Curatube/SettingsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Server & Settings",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Session",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Storage",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "https://your-server.example",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 17
+        }
+      },
+      {
+        "comment": "",
+        "key": "Checking…",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save & Test",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 33
+        }
+      },
+      {
+        "comment": "",
+        "key": "Server",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "The server URL is used for catalog, downloads and playback. Sign-in happens automatically if the server is behind a web SSO.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 39
+        }
+      },
+      {
+        "comment": "",
+        "key": "Signed in",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sign out",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Downloaded videos",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 49
+        }
+      }
+    ]
+  },
+  "version": 1
+}

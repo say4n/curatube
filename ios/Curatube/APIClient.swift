@@ -76,6 +76,21 @@ final class APIClient {
         return try Self.decoder.decode(PlaylistsResponse.self, from: data).playlists
     }
 
+    /// Follows redirects (e.g. Authelia SSO) from the user's server URL and
+    /// returns the *final* URL — the actual login page — so the web view can
+    /// authenticate with the server's real redirect chain instead of a guessed
+    /// URL. Uses the default session so cross-host redirects are followed.
+    func resolveLoginURL() async throws -> URL {
+        let url = try apiEndpoint("/api/playlists")
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 30
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.badResponse
+        }
+        return http.url ?? url
+    }
+
     func fetchVideos(playlistID: String) async throws -> [Video] {
         let path = "/api/playlists/\(Self.pathSegment(playlistID))/videos"
         let data = try await perform(URLRequest(url: try apiEndpoint(path)))
