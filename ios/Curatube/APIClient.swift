@@ -89,14 +89,7 @@ final class APIClient {
 
     func fetchPlaylists() async throws -> [Playlist] {
         let data = try await perform(URLRequest(url: try apiEndpoint("/api/playlists")))
-        do {
-            return try Self.decoder.decode(PlaylistsResponse.self, from: data).playlists
-        } catch {
-            let ns = error as NSError
-            print("Curatube decode playlists failed \(ns.domain) \(ns.code) \(error.localizedDescription)")
-            print("Curatube decode data (\(data.count)B): \(String(data: data.prefix(500), encoding: .utf8) ?? "<non-utf8>")")
-            throw error
-        }
+        return try Self.decoder.decode(PlaylistsResponse.self, from: data).playlists
     }
 
     func setPlaylistArchived(playlistID: String, archived: Bool) async throws -> Playlist {
@@ -129,12 +122,9 @@ final class APIClient {
             guard let http = response as? HTTPURLResponse else {
                 throw APIError.badResponse
             }
-            print("Curatube resolveLoginURL final: \(http.url?.absoluteString ?? "nil") hops=\(tracer.hops)")
             return http.url ?? url
         } catch {
             session.invalidateAndCancel()
-            let ns = error as NSError
-            print("Curatube resolveLoginURL failed code=\(ns.code) hops=\(tracer.hops)")
             throw APIError.unreachableSignIn(hops: tracer.hops)
         }
     }
@@ -143,26 +133,6 @@ final class APIClient {
         let path = "/api/playlists/\(Self.pathSegment(playlistID))/videos"
         let data = try await perform(URLRequest(url: try apiEndpoint(path)))
         return try Self.decoder.decode(PlaylistVideosResponse.self, from: data)
-    }
-
-    /// Fetches completion state for a set of videos via the per-video progress
-    /// endpoint. Used when the server doesn't yet include bulk `progress` in
-    /// the playlist-videos response.
-    func fetchCompletedVideoIDs(_ videoIDs: [String]) async throws -> Set<String> {
-        var completed: Set<String> = []
-        for videoID in videoIDs {
-            do {
-                let path = "/api/videos/\(Self.pathSegment(videoID))/progress"
-                let data = try await perform(URLRequest(url: try apiEndpoint(path)))
-                let response = try Self.decoder.decode(SingleVideoProgressResponse.self, from: data)
-                if response.progress?.completed == true {
-                    completed.insert(videoID)
-                }
-            } catch {
-                // Skip individual misses so one bad video doesn't blank the list.
-            }
-        }
-        return completed
     }
 
     func fetchDownloadStatus(videoID: String) async throws -> DownloadStatus {
@@ -211,8 +181,6 @@ final class APIClient {
             guard let http = response as? HTTPURLResponse else {
                 throw APIError.badResponse
             }
-            let bodyPreview = String(data: data.prefix(200), encoding: .utf8) ?? "<non-utf8>"
-            print("Curatube GET \(request.url?.absoluteString ?? "-") status=\(http.statusCode) bytes=\(data.count) preview=\(bodyPreview)")
             guard (200...299).contains(http.statusCode) else {
                 throw Self.serverErrorDescription(from: data, status: http.statusCode)
             }

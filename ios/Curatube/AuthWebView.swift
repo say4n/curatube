@@ -20,13 +20,8 @@ struct AuthWebView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let userContent = WKUserContentController()
-        userContent.add(context.coordinator, name: "curatubeConsole")
-        userContent.addUserScript(Self.consoleProbeScript)
-
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
-        configuration.userContentController = userContent
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -41,47 +36,7 @@ struct AuthWebView: UIViewRepresentable {
         coordinator.detach(from: uiView)
     }
 
-    /// Forwards console, JS errors and unhandled rejections to the app's unified
-    /// log so a blank login page can be debugged from `log show`.
-    private static let consoleProbeScript: WKUserScript = {
-        let source = """
-        (function () {
-          if (window.__curatubeProbe) return;
-          window.__curatubeProbe = true;
-          var send = function (level, text) {
-            try {
-              window.webkit.messageHandlers.curatubeConsole.postMessage({ level: level, text: text });
-            } catch (e) {}
-          };
-          ['log', 'info', 'warn', 'error'].forEach(function (l) {
-            var original = console[l];
-            console[l] = function () {
-              var text = Array.prototype.map.call(arguments, function (a) {
-                try { return (typeof a === 'object' && a !== null) ? JSON.stringify(a) : String(a); }
-                catch (e) { return String(a); }
-              }).join(' ');
-              send(l, text);
-              try { original.apply(console, arguments); } catch (e) {}
-            };
-          });
-          window.addEventListener('error', function (e) {
-            send('error', 'Uncaught: ' + e.message + ' at ' + (e.filename || '?') + ':' + (e.lineno || '?'));
-          });
-          window.addEventListener('unhandledrejection', function (e) {
-            send('error', 'UnhandledRejection: ' + String(e.reason));
-          });
-          document.addEventListener('DOMContentLoaded', function () {
-            send('log', 'DOMContentLoaded; body children: ' + document.body.children.length);
-          });
-          window.addEventListener('load', function () {
-            send('log', 'window load; body text len: ' + (document.body.innerText || '').length);
-          });
-        })();
-        """
-        return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-    }()
-
-    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKHTTPCookieStoreObserver {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKHTTPCookieStoreObserver {
         private let client: APIClient
         private weak var webView: WKWebView?
         private var verifyTask: Task<Void, Never>?
@@ -100,16 +55,6 @@ struct AuthWebView: UIViewRepresentable {
         func detach(from webView: WKWebView) {
             webView.configuration.websiteDataStore.httpCookieStore.remove(self)
             verifyTask?.cancel()
-        }
-
-        // MARK: - Diagnostics
-
-        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard message.name == "curatubeConsole",
-                  let body = message.body as? [String: Any],
-                  let level = body["level"] as? String,
-                  let text = body["text"] as? String else { return }
-            os_log("AuthWebView [%{public}@] %{public}@", log: Log.auth, level, text)
         }
 
         // MARK: - Navigation

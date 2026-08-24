@@ -63,11 +63,7 @@ struct VideoProgress: Codable, Hashable {
 
 struct PlaylistVideosResponse: Codable {
     let videos: [Video]
-    let progress: [VideoProgress]?
-}
-
-struct SingleVideoProgressResponse: Codable {
-    let progress: VideoProgress?
+    let progress: [VideoProgress]
 }
 
 struct DownloadResponse: Codable {

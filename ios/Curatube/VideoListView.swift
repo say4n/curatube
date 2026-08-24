@@ -48,11 +48,7 @@ struct VideoListView: View {
         do {
             let response = try await client.fetchVideos(playlistID: playlist.id)
             videos = response.videos
-            if let progress = response.progress {
-                watchedIDs = Set(progress.filter { $0.completed }.map(\.videoID))
-            } else {
-                watchedIDs = try await client.fetchCompletedVideoIDs(videos.map(\.id))
-            }
+            watchedIDs = Set(response.progress.filter { $0.completed }.map(\.videoID))
         } catch {
             loadError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             if case APIError.authRequired = error {
