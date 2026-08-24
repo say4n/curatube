@@ -14,6 +14,10 @@ final class APIClient {
     /// (e.g. to an Authelia SSO login page). The UI presents the login web view.
     var needsAuth = false
 
+    /// Set when the user cancels the in-app login sheet; cleared on successful
+    /// login so the caller doesn't blindly retest after a cancellation.
+    var authRequestAborted = false
+
     private let redirectDelegate = RedirectDelegate()
     private let session: URLSession
 
@@ -98,6 +102,7 @@ final class APIClient {
         for cookie in cookies {
             HTTPCookieStorage.shared.setCookie(cookie)
         }
+        authRequestAborted = false
         needsAuth = false
     }
 

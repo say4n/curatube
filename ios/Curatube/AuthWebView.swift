@@ -4,12 +4,17 @@ import WebKit
 /// Full-screen SSO login. Loads the server endpoints in a WKWebView so the
 /// Authelia/SAML flow can complete, then harvests the session cookie and hands
 /// it to the API client. The hosting view dismisses when `client.needsAuth` clears.
+///
+/// Login is only considered complete after the web view finishes navigating
+/// back to the *base host* (the SSO redirect target). The proxy sets a
+/// placeholder cookie on first redirect, so regardless of cookie activity we
+/// must wait for that navigation, or the login sheet would tear down early.
 struct AuthWebView: UIViewRepresentable {
     let client: APIClient
     let startURL: URL
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(client: client, startURL: startURL)
+        Coordinator(client: client)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -17,57 +22,48 @@ struct AuthWebView: UIViewRepresentable {
         configuration.websiteDataStore = .default()
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
-        context.coordinator.attach(to: webView)
         webView.load(URLRequest(url: startURL))
         return webView
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
-    static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
-        coordinator.detach(from: uiView)
-    }
-
-    final class Coordinator: NSObject, WKNavigationDelegate, WKHTTPCookieStoreObserver {
+    final class Coordinator: NSObject, WKNavigationDelegate {
         private let client: APIClient
-        private let startURL: URL
-        private weak var webView: WKWebView?
         private var succeeded = false
 
-        init(client: APIClient, startURL: URL) {
+        init(client: APIClient) {
             self.client = client
-            self.startURL = startURL
         }
 
-        func attach(to webView: WKWebView) {
-            self.webView = webView
-            webView.configuration.websiteDataStore.httpCookieStore.add(self)
-        }
-
-        func detach(from webView: WKWebView) {
-            webView.configuration.websiteDataStore.httpCookieStore.remove(self)
-        }
-
-        func cookiesDidChange(in cookieStore: WKHTTPCookieStore) {
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            guard !succeeded, let url = webView.url, isBaseHost(url) else { return }
             Task { @MainActor [weak self] in
-                guard let self, !self.succeeded else { return }
-                let cookies: [HTTPCookie] = await withCheckedContinuation { continuation in
-                    cookieStore.getAllCookies { cookies in
-                        continuation.resume(returning: cookies)
-                    }
-                }
-                guard let baseHost = self.client.baseURL?.host, !baseHost.isEmpty else { return }
-                let hasSession = cookies.contains { cookie in
-                    self.matchesHost(cookie, baseHost: baseHost)
-                }
-                guard hasSession else { return }
-                self.succeeded = true
-                self.client.completeLogin(cookies: cookies)
+                guard let self else { return }
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                await self.harvest(from: webView)
             }
         }
 
-        private func matchesHost(_ cookie: HTTPCookie, baseHost: String) -> Bool {
-            let host = baseHost.lowercased()
+        @MainActor
+        private func harvest(from webView: WKWebView) async {
+            guard !succeeded else { return }
+            let cookies: [HTTPCookie] = await withCheckedContinuation { continuation in
+                webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { cookies in
+                    continuation.resume(returning: cookies)
+                }
+            }
+            guard cookies.contains(where: { matchesHost($0) }) else { return }
+            succeeded = true
+            client.completeLogin(cookies: cookies)
+        }
+
+        private func isBaseHost(_ url: URL) -> Bool {
+            url.host?.lowercased() == client.baseURL?.host?.lowercased()
+        }
+
+        private func matchesHost(_ cookie: HTTPCookie) -> Bool {
+            guard let host = client.baseURL?.host?.lowercased() else { return false }
             var domain = (cookie.domain ?? "").lowercased()
             if domain.hasPrefix(".") { domain.removeFirst() }
             return !domain.isEmpty && (host == domain || host.hasSuffix("." + domain))
@@ -87,11 +83,16 @@ struct AuthScreen: View {
                     ContentUnavailableView("Invalid server URL", systemImage: "server.rack")
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
             .navigationTitle("Sign in")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { client.needsAuth = false }
+                    Button("Cancel") {
+                        client.authRequestAborted = true
+                        client.needsAuth = false
+                    }
                 }
             }
         }

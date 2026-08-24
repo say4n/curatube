@@ -58,10 +58,14 @@ struct SettingsView: View {
                 if focused { draftURL = client.baseURLString }
             }
             .onChange(of: client.needsAuth) { _, needsAuth in
-                if !needsAuth, pendingTestAfterLogin, !testing {
+                guard !needsAuth else { return }
+                let aborted = client.authRequestAborted
+                client.authRequestAborted = false
+                if pendingTestAfterLogin, !aborted, !testing {
                     pendingTestAfterLogin = false
                     Task { await testConnection() }
                 }
+                pendingTestAfterLogin = false
             }
         }
     }
