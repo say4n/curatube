@@ -90,23 +90,23 @@ struct AuthWebView: UIViewRepresentable {
                   let body = message.body as? [String: Any],
                   let level = body["level"] as? String,
                   let text = body["text"] as? String else { return }
-            os_log("AuthWebView [%{public}@] %{public}@", Log.auth, level, text)
+            os_log("AuthWebView [%{public}@] %{public}@", log: Log.auth, level, text)
         }
 
         // MARK: - Navigation
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             if let url = webView.url {
-                os_log("AuthWebView didStart %{public}@", Log.auth, url.absoluteString)
+                os_log("AuthWebView didStart %{public}@", log: Log.auth, url.absoluteString)
             }
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            os_log("AuthWebView didFailProvisional %{public}@ %{public}@", Log.auth, error.localizedDescription, webView.url?.absoluteString ?? "-")
+            os_log("AuthWebView didFailProvisional %{public}@ url=%{public}@", log: Log.auth, error.localizedDescription, webView.url?.absoluteString ?? "-")
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            os_log("AuthWebView didFinish %{public}@", Log.auth, webView.url?.absoluteString ?? "-")
+            os_log("AuthWebView didFinish %{public}@", log: Log.auth, webView.url?.absoluteString ?? "-")
             guard !succeeded, let url = webView.url, isBaseHost(url) else { return }
             Task { @MainActor [weak self] in
                 guard let self else { return }
