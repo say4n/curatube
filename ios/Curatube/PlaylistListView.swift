@@ -1,10 +1,34 @@
 import SwiftUI
 
+enum PlaylistScope: String, CaseIterable, Identifiable {
+    case unarchived
+    case archived
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .unarchived: return "Default"
+        case .archived: return "Archived"
+        }
+    }
+}
+
 struct PlaylistListView: View {
     @Environment(APIClient.self) private var client
 
     @State private var playlists: [Playlist] = []
     @State private var loadError: String?
+    @State private var scope: PlaylistScope = .unarchived
+
+    private var visiblePlaylists: [Playlist] {
+        switch scope {
+        case .unarchived:
+            return playlists.filter { $0.archivedAt == nil }
+        case .archived:
+            return playlists.filter { $0.archivedAt != nil }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -26,22 +50,51 @@ struct PlaylistListView: View {
                         }
                         Button("Retry") { Task { await reload() } }
                     }
-                } else if playlists.isEmpty {
+                } else if visiblePlaylists.isEmpty {
                     ContentUnavailableView(
-                        "No playlists yet",
+                        playlists.isEmpty ? "No playlists yet" : "No playlists here",
                         systemImage: "film.stack",
-                        description: Text("Import a playlist on the server to get started.")
+                        description: Text(
+                            playlists.isEmpty
+                                ? "Import a playlist on the server to get started."
+                                : "Nothing to show in this filter. Switch it from the top-right menu."
+                        )
                     )
                 } else {
-                    List(playlists) { playlist in
+                    List(visiblePlaylists) { playlist in
                         NavigationLink(value: playlist) {
                             PlaylistRow(playlist: playlist)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            let isArchived = playlist.archivedAt != nil
+                            Button {
+                                Task { await toggleArchive(playlist) }
+                            } label: {
+                                Label(
+                                    isArchived ? "Unarchive" : "Archive",
+                                    systemImage: isArchived ? "tray.and.arrow.up" : "archivebox"
+                                )
+                            }
+                            .tint(isArchived ? .blue : .orange)
                         }
                     }
                     .refreshable { await reload() }
                 }
             }
             .navigationTitle("Curatube")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("Playlist scope", selection: $scope) {
+                            ForEach(PlaylistScope.allCases) { scope in
+                                Text(scope.title).tag(scope)
+                            }
+                        }
+                    } label: {
+                        Label("Filter playlists", systemImage: "line.3.horizontal.decrease.circle")
+                    }
+                }
+            }
             .task { await reload() }
             .onChange(of: client.needsAuth) { _, needsAuth in
                 if !needsAuth, loadError != nil {
@@ -50,6 +103,21 @@ struct PlaylistListView: View {
             }
             .navigationDestination(for: Playlist.self) { playlist in
                 VideoListView(playlist: playlist)
+            }
+        }
+    }
+
+    private func toggleArchive(_ playlist: Playlist) async {
+        let archived = playlist.archivedAt == nil
+        do {
+            let updated = try await client.setPlaylistArchived(playlistID: playlist.id, archived: archived)
+            if let index = playlists.firstIndex(where: { $0.id == playlist.id }) {
+                playlists[index] = updated
+            }
+        } catch {
+            loadError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            if case APIError.authRequired = error {
+                client.needsAuth = true
             }
         }
     }

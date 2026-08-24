@@ -23,7 +23,23 @@ final class APIClient {
 
     private static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.keyDecodingStrategy = .custom { keys in
+            let raw = keys.last?.stringValue ?? ""
+            let parts = raw.split(separator: "_")
+            let name: String
+            if parts.count > 1 {
+                name = parts.enumerated().map { index, part in
+                    let s = String(part)
+                    if index == 0 { return s }
+                    let upper = s.uppercased()
+                    if upper == "URL" || upper == "ID" { return upper }
+                    return s.prefix(1).uppercased() + s.dropFirst()
+                }.joined()
+            } else {
+                name = raw
+            }
+            return AnyCodingKey(stringValue: name)!
+        }
         return decoder
     }()
 
@@ -73,28 +89,80 @@ final class APIClient {
 
     func fetchPlaylists() async throws -> [Playlist] {
         let data = try await perform(URLRequest(url: try apiEndpoint("/api/playlists")))
-        return try Self.decoder.decode(PlaylistsResponse.self, from: data).playlists
+        do {
+            return try Self.decoder.decode(PlaylistsResponse.self, from: data).playlists
+        } catch {
+            let ns = error as NSError
+            print("Curatube decode playlists failed \(ns.domain) \(ns.code) \(error.localizedDescription)")
+            print("Curatube decode data (\(data.count)B): \(String(data: data.prefix(500), encoding: .utf8) ?? "<non-utf8>")")
+            throw error
+        }
+    }
+
+    func setPlaylistArchived(playlistID: String, archived: Bool) async throws -> Playlist {
+        var request = URLRequest(url: try apiEndpoint("/api/playlists/\(Self.pathSegment(playlistID))/archive"))
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["archived": archived])
+        let data = try await perform(request)
+        return try Self.decoder.decode(PlaylistResponse.self, from: data).playlist
     }
 
     /// Follows redirects (e.g. Authelia SSO) from the user's server URL and
     /// returns the *final* URL — the actual login page — so the web view can
     /// authenticate with the server's real redirect chain instead of a guessed
-    /// URL. Uses the default session so cross-host redirects are followed.
+    /// URL. Records each redirect hop so unreachable SSO hosts produce a
+    /// helpful error instead of a generic "could not connect".
     func resolveLoginURL() async throws -> URL {
         let url = try apiEndpoint("/api/playlists")
         var request = URLRequest(url: url)
         request.timeoutInterval = 30
-        let (_, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw APIError.badResponse
+
+        let tracer = RedirectTracer()
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 30
+        let session = URLSession(configuration: configuration, delegate: tracer, delegateQueue: .main)
+
+        do {
+            let (_, response) = try await session.data(for: request)
+            session.invalidateAndCancel()
+            guard let http = response as? HTTPURLResponse else {
+                throw APIError.badResponse
+            }
+            print("Curatube resolveLoginURL final: \(http.url?.absoluteString ?? "nil") hops=\(tracer.hops)")
+            return http.url ?? url
+        } catch {
+            session.invalidateAndCancel()
+            let ns = error as NSError
+            print("Curatube resolveLoginURL failed code=\(ns.code) hops=\(tracer.hops)")
+            throw APIError.unreachableSignIn(hops: tracer.hops)
         }
-        return http.url ?? url
     }
 
-    func fetchVideos(playlistID: String) async throws -> [Video] {
+    func fetchVideos(playlistID: String) async throws -> PlaylistVideosResponse {
         let path = "/api/playlists/\(Self.pathSegment(playlistID))/videos"
         let data = try await perform(URLRequest(url: try apiEndpoint(path)))
-        return try Self.decoder.decode(VideosResponse.self, from: data).videos
+        return try Self.decoder.decode(PlaylistVideosResponse.self, from: data)
+    }
+
+    /// Fetches completion state for a set of videos via the per-video progress
+    /// endpoint. Used when the server doesn't yet include bulk `progress` in
+    /// the playlist-videos response.
+    func fetchCompletedVideoIDs(_ videoIDs: [String]) async throws -> Set<String> {
+        var completed: Set<String> = []
+        for videoID in videoIDs {
+            do {
+                let path = "/api/videos/\(Self.pathSegment(videoID))/progress"
+                let data = try await perform(URLRequest(url: try apiEndpoint(path)))
+                let response = try Self.decoder.decode(SingleVideoProgressResponse.self, from: data)
+                if response.progress?.completed == true {
+                    completed.insert(videoID)
+                }
+            } catch {
+                // Skip individual misses so one bad video doesn't blank the list.
+            }
+        }
+        return completed
     }
 
     func fetchDownloadStatus(videoID: String) async throws -> DownloadStatus {
@@ -143,6 +211,8 @@ final class APIClient {
             guard let http = response as? HTTPURLResponse else {
                 throw APIError.badResponse
             }
+            let bodyPreview = String(data: data.prefix(200), encoding: .utf8) ?? "<non-utf8>"
+            print("Curatube GET \(request.url?.absoluteString ?? "-") status=\(http.statusCode) bytes=\(data.count) preview=\(bodyPreview)")
             guard (200...299).contains(http.statusCode) else {
                 throw Self.serverErrorDescription(from: data, status: http.statusCode)
             }
@@ -174,5 +244,41 @@ final class RedirectDelegate: NSObject, URLSessionTaskDelegate {
             onRedirect?(host)
         }
         return nil
+    }
+}
+
+/// A `CodingKey` usable with custom key-decoding strategies.
+struct AnyCodingKey: CodingKey {
+    let stringValue: String
+    let intValue: Int?
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+
+    init?(intValue: Int) {
+        self.stringValue = String(intValue)
+        self.intValue = intValue
+    }
+}
+
+/// URLSession delegate that follows redirects and records each hop, used to
+/// resolve (and diagnose) the SSO login URL.
+final class RedirectTracer: NSObject, URLSessionTaskDelegate {
+    private(set) var hops: [String] = []
+
+    nonisolated func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest
+    ) async -> URLRequest? {
+        if let url = request.url {
+            Task { @MainActor in
+                self.hops.append(url.host ?? url.absoluteString)
+            }
+        }
+        return request
     }
 }

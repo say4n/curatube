@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPlaylist, getPlaylistVideos } from "@/lib/db";
+import { getPlaylist, getPlaylistVideos, getPlaylistVideoProgress } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,5 +15,8 @@ export async function GET(
     return NextResponse.json({ error: "Playlist not found." }, { status: 404 });
   }
 
-  return NextResponse.json({ videos: getPlaylistVideos(playlistId) });
+  return NextResponse.json({
+    videos: getPlaylistVideos(playlistId),
+    progress: getPlaylistVideoProgress(playlistId)
+  });
 }

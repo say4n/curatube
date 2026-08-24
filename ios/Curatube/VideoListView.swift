@@ -7,6 +7,7 @@ struct VideoListView: View {
     @Environment(OfflineLibrary.self) private var offlineLibrary
 
     @State private var videos: [Video] = []
+    @State private var watchedIDs: Set<String> = []
     @State private var loadError: String?
 
     var body: some View {
@@ -28,7 +29,7 @@ struct VideoListView: View {
             } else {
                 List(videos) { video in
                     NavigationLink(value: video) {
-                        VideoRow(video: video)
+                        VideoRow(video: video, isWatched: watchedIDs.contains(video.id))
                     }
                 }
                 .refreshable { await reload() }
@@ -45,7 +46,13 @@ struct VideoListView: View {
     private func reload() async {
         loadError = nil
         do {
-            videos = try await client.fetchVideos(playlistID: playlist.id)
+            let response = try await client.fetchVideos(playlistID: playlist.id)
+            videos = response.videos
+            if let progress = response.progress {
+                watchedIDs = Set(progress.filter { $0.completed }.map(\.videoID))
+            } else {
+                watchedIDs = try await client.fetchCompletedVideoIDs(videos.map(\.id))
+            }
         } catch {
             loadError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             if case APIError.authRequired = error {
@@ -57,6 +64,7 @@ struct VideoListView: View {
 
 struct VideoRow: View {
     let video: Video
+    var isWatched = false
 
     @Environment(APIClient.self) private var client
     @Environment(OfflineLibrary.self) private var offlineLibrary
@@ -84,6 +92,8 @@ struct VideoRow: View {
                 .lineLimit(2)
             Spacer()
         }
+        .opacity(isWatched ? 0.4 : 1)
+        .saturation(isWatched ? 0 : 1)
     }
 
     @ViewBuilder
