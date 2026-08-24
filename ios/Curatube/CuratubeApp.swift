@@ -1,10 +1,19 @@
 import SwiftUI
 import Observation
+import AVFoundation
 
 @main
 struct CuratubeApp: App {
     @State private var client = APIClient()
     @State private var offlineLibrary = OfflineLibrary()
+
+    init() {
+        // Play video audio via the media volume even when the device is muted
+        // via the ring/silent switch (like YouTube).
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .moviePlayback)
+        try? session.setActive(true)
+    }
 
     var body: some Scene {
         WindowGroup {

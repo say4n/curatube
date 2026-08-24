@@ -135,10 +135,31 @@ final class APIClient {
         return try Self.decoder.decode(PlaylistVideosResponse.self, from: data)
     }
 
+    func fetchTranscript(videoID: String) async throws -> [TranscriptSegment] {
+        let path = "/api/videos/\(Self.pathSegment(videoID))/transcript"
+        let data = try await perform(URLRequest(url: try apiEndpoint(path)))
+        return try Self.decoder.decode(TranscriptResponse.self, from: data).transcript
+    }
+
     func fetchDownloadStatus(videoID: String) async throws -> DownloadStatus {
         let path = "/api/videos/\(Self.pathSegment(videoID))/download"
         let data = try await perform(URLRequest(url: try apiEndpoint(path)))
         return try Self.decoder.decode(DownloadResponse.self, from: data).download
+    }
+
+    func saveProgress(videoID: String, positionSeconds: Double, durationSeconds: Double?, completed: Bool) async throws {
+        var payload: [String: Any] = ["position_seconds": positionSeconds]
+        if let durationSeconds {
+            payload["duration_seconds"] = durationSeconds
+        }
+        if completed {
+            payload["completed"] = true
+        }
+        var request = URLRequest(url: try apiEndpoint("/api/videos/\(Self.pathSegment(videoID))/progress"))
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        _ = try await perform(request)
     }
 
     func startServerDownload(videoID: String) async throws -> DownloadStatus {

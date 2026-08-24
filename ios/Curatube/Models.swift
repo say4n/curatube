@@ -66,6 +66,17 @@ struct PlaylistVideosResponse: Codable {
     let progress: [VideoProgress]
 }
 
+struct TranscriptSegment: Codable, Identifiable, Hashable {
+    let id: Int
+    let startSeconds: Double
+    let durationSeconds: Double?
+    let text: String
+}
+
+struct TranscriptResponse: Codable {
+    let transcript: [TranscriptSegment]
+}
+
 struct DownloadResponse: Codable {
     let download: DownloadStatus
 }
